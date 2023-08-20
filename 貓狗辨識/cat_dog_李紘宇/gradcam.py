@@ -283,7 +283,7 @@ def main():
     model = CNNModel(input_shape=(3, img_size, img_size), num_classes=num_classes)
     model_path = "model_20.pth"
     model.load_state_dict(torch.load(model_path))
-    target_layers = [model.conv_layers[-1]]
+    target_layers = [model.conv_layers]
     #print(target_layers)
     
    # model = models.vgg16(pretrained=True)
@@ -291,7 +291,7 @@ def main():
     #print([model.features])
     
     # load image，读取的图片
-    img_path = "test.jpg"
+    img_path = "test2.jpg"
     
     test_image = cv2.imread(img_path)
     test_image = cv2.resize(test_image, (img_size, img_size))
