@@ -291,7 +291,7 @@ def main():
     #print([model.features])
     
     # load image，读取的图片
-    img_path = "test2.jpg"
+    img_path = "test.jpg"
     
     test_image = cv2.imread(img_path)
     test_image = cv2.resize(test_image, (img_size, img_size))
