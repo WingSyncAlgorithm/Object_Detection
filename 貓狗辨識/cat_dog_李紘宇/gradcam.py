@@ -283,7 +283,7 @@ def main():
     model = CNNModel(input_shape=(3, img_size, img_size), num_classes=num_classes)
     model_path = "model_20.pth"
     model.load_state_dict(torch.load(model_path))
-    target_layers = [model.conv_layers]
+    target_layers = [model.conv_layers[3]]
     #print(target_layers)
     
    # model = models.vgg16(pretrained=True)
