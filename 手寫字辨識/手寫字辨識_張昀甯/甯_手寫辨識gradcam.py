@@ -1,4 +1,3 @@
-# gradcam 出不來
 import torch
 import torchvision
 import torchvision.transforms as transforms
@@ -118,9 +117,7 @@ plt.ylabel("True Label")
 plt.xlabel("Predicted Label")
 plt.show()
 
-
-
-
+# Grad-CAM 部分
 class GradCAM:
     def __init__(self, model):
         self.model = model
@@ -151,7 +148,14 @@ class GradCAM:
         loss.backward(retain_graph=True)
 
         gradients = self.gradients[0].to(input_image.device)
+        
+        # 確保 gradients 張量至少有3個維度
+        if gradients.dim() < 3:
+            gradients = gradients.unsqueeze(2).unsqueeze(3)  # 添加兩個維度
+
         pooled_gradients = F.adaptive_avg_pool2d(gradients, (1, 1))
+        
+        # 移除多餘的維度
         pooled_gradients = pooled_gradients[0, :, :, :]
 
         feature_maps = self.feature_maps[0].to(input_image.device)
@@ -170,30 +174,45 @@ class GradCAM:
 # 初始化設備
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# 隨機選取十張測試圖片，顯示其原圖和 Grad-CAM 結果
+# 隨機選取一張測試圖片，顯示其原圖和 Grad-CAM 結果
 gradcam = GradCAM(model=net)
 gradcam.register_hooks()
 
-random_indices = np.random.choice(len(testset), size=10, replace=False)
-for idx in random_indices:
-    test_image, test_label = testset[idx]
-    test_image = test_image.unsqueeze(0).to(device)
+random_index = np.random.choice(len(testset))
+test_image, test_label = testset[random_index]
 
-    # 確保模型處於評估模式，以防止額外的計算和錯誤
-    net.eval()
-    with torch.no_grad():
-        # 將 Grad-CAM 熱力圖生成的計算放入沒有梯度計算的上下文中
-        with torch.no_grad():
-            cam_image = gradcam.generate_cam(test_image, target_class=test_label)
+# 轉換成模型輸入所需的格式
+test_image = test_image.unsqueeze(0).to(device)
 
-    heatmap = cv2.applyColorMap(np.uint8(255 * cam_image), cv2.COLORMAP_JET)
-    blended_image = cv2.addWeighted(np.array(test_image.squeeze().cpu()), 0.5, heatmap, 0.5, 0)
+# 確保模型處於評估模式，以避免 dropout 等層的影響
+net.eval()
 
-    plt.figure(figsize=(10, 5))
-    plt.subplot(1, 2, 1)
-    plt.imshow(test_image.squeeze().cpu(), cmap='gray')
-    plt.title(f"True Label: {test_label}")
-    plt.subplot(1, 2, 2)
-    plt.imshow(blended_image)
-    plt.title("Grad-CAM Heatmap")
-    plt.show()
+# 取得模型預測的類別
+with torch.no_grad():
+    predicted_class = net(test_image).argmax().item()
+
+# 生成 Grad-CAM
+heatmap = gradcam.generate_cam(test_image, target_class=predicted_class)
+
+# 將 heatmap 轉為 OpenCV 格式
+heatmap = cv2.resize(heatmap, (test_image.size()[-1], test_image.size()[-2]))
+heatmap = np.uint8(255 * heatmap)
+heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
+
+# 將 heatmap 與原圖結合
+original_image = test_image.squeeze(0).permute(1, 2, 0).cpu().numpy()
+superimposed_image = heatmap * 0.7 + original_image * 0.3
+superimposed_image /= superimposed_image.max()
+
+# 顯示圖像和 Grad-CAM 結果
+plt.figure(figsize=(10, 5))
+plt.subplot(121)
+plt.imshow(original_image, cmap='gray')
+plt.title(f"True Class: {test_label}")
+plt.axis('off')
+plt.subplot(122)
+plt.imshow(superimposed_image)
+plt.title(f"Predicted Class: {predicted_class}")
+plt.axis('off')
+plt.show()
+
