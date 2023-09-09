@@ -88,7 +88,7 @@ class ActivationsAndGradients:
         return self.model(x)
 
     def release(self):
-        for handle in self.handles: 遍歷所有鉤子
+        for handle in self.handles: # 遍歷所有鉤子
             handle.remove() # 將註冊的鉤子全部清除
 
 
@@ -114,12 +114,12 @@ class GradCAM:
         will typically need to only implement this function. """
 
     @staticmethod
-    def get_cam_weights(grads): #輸入梯度grads[batch,通道,寬,高]
+    def get_cam_weights(grads): #輸入梯度grads[batch,通道,高,寬]
         return np.mean(grads, axis=(2, 3), keepdims=True) # 輸出特徵圖的每一點梯度的平均，並保持矩陣形狀為[batch,通道,1,1]
 
     @staticmethod
     def get_loss(output, target_category):
-        loss = 0
+        loss = 0 # 初始化loss
         for i in range(len(target_category)):
             loss = loss + output[i, target_category[i]]#当前第i张图片获取的类别索引（感兴趣的类别值）
         return loss
@@ -133,8 +133,9 @@ class GradCAM:
 
     @staticmethod
     def get_target_width_height(input_tensor):
-        width, height = input_tensor.size(-1), input_tensor.size(-2)
-        return width, height
+        width, height = input_tensor.size(-1), input_tensor.size(-2)  # 取得輸入張量的寬度和高度
+        return width, height  # 回傳寬度和高度
+
 
     def compute_cam_per_layer(self, input_tensor):
         activations_list = [a.cpu().data.numpy()
@@ -162,16 +163,16 @@ class GradCAM:
 
     @staticmethod
     def scale_cam_image(cam, target_size=None):
-        result = []
-        for img in cam:
-            img = img - np.min(img)
-            img = img / (1e-7 + np.max(img))
-            if target_size is not None:
-                img = cv2.resize(img, target_size)
-            result.append(img)
-        result = np.float32(result)
+        result = []  # 創建一個空的列表 result 用來儲存處理後的影像
+        for img in cam:  # 進入迴圈，對於 cam 中的每張影像執行以下操作
+            img = img - np.min(img)  # 將影像中的最小值減去影像中的最小值，以進行正規化處理
+            img = img / (1e-7 + np.max(img))  # 將影像除以影像中的最大值，同樣為了正規化處理
+            if target_size is not None:  # 檢查目標尺寸是否為空值
+                img = cv2.resize(img, target_size)  # 若有指定目標尺寸，使用 OpenCV (cv2) 進行影像縮放處理
+            result.append(img)  # 將處理後的影像加入 result 列表
+        result = np.float32(result)  # 將 result 轉換成浮點數型態的 NumPy 陣列
+        return result  # 回傳處理後的影像陣列
 
-        return result
 
     def __call__(self, input_tensor, target_category=None):
 
@@ -234,45 +235,46 @@ def show_cam_on_image(img: np.ndarray,
     :returns: The default image with the cam overlay.
     """
 
-    heatmap = cv2.applyColorMap(np.uint8(255 * mask), colormap)
+    heatmap = cv2.applyColorMap(np.uint8(255 * mask), colormap)  # 將 CAM 遮罩應用成熱度圖
     if use_rgb:
-        heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB)
-    heatmap = np.float32(heatmap) / 255
+        heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB)  # 若使用 RGB 格式，轉換顏色通道
+    heatmap = np.float32(heatmap) / 255  # 正規化熱度圖的值到範圍 [0, 1]
 
     if np.max(img) > 1:
         raise Exception(
-            "The input image should np.float32 in the range [0, 1]")
-    #print(heatmap[17])
-    cam = heatmap + img
-    cam = cam / np.max(cam)
-    return np.uint8(255 * cam)
+            "The input image should np.float32 in the range [0, 1]")  # 檢查輸入圖像的值範圍，必須在0~1之間
+
+    cam = heatmap + img  # 將熱度圖和原始圖像相加
+    cam = cam / np.max(cam)  # 正規化疊加後的圖像的值到範圍 [0, 1]
+    return np.uint8(255 * cam)  # 將圖像的值範圍轉換回 [0, 255]
 
 
 def center_crop_img(img: np.ndarray, size: int):
-    h, w, c = img.shape
+    h, w, c = img.shape  # 取得輸入圖像的高、寬和通道數
 
-    if w == h == size:
+    if w == h == size:  # 若圖像已經是目標尺寸，則直接返回原圖
         return img
 
-    if w < h:
-        ratio = size / w
-        new_w = size
-        new_h = int(h * ratio)
-    else:
-        ratio = size / h
-        new_h = size
-        new_w = int(w * ratio)
+    if w < h:  # 若寬度小於高度
+        ratio = size / w  # 計算裁剪比例
+        new_w = size  # 新的寬度為目標尺寸
+        new_h = int(h * ratio)  # 新的高度為經過比例縮放後的高度
+    else:  # 若高度小於寬度
+        ratio = size / h  # 計算裁剪比例
+        new_h = size  # 新的高度為目標尺寸
+        new_w = int(w * ratio)  # 新的寬度為經過比例縮放後的寬度
 
-    img = cv2.resize(img, dsize=(new_w, new_h))
+    img = cv2.resize(img, dsize=(new_w, new_h))  # 將圖像縮放至新的尺寸
 
-    if new_w == size:
-        h = (new_h - size) // 2
-        img = img[h: h+size]
-    else:
-        w = (new_w - size) // 2
-        img = img[:, w: w+size]
+    if new_w == size:  # 若新的寬度等於目標尺寸
+        h = (new_h - size) // 2  # 計算上下裁剪的邊緣大小
+        img = img[h: h+size]  # 進行上下裁剪
+    else:  # 若新的高度等於目標尺寸
+        w = (new_w - size) // 2  # 計算左右裁剪的邊緣大小
+        img = img[:, w: w+size]  # 進行左右裁剪
 
-    return img
+    return img  # 返回裁剪後的圖像
+
 
 def main():
     # #如果使用自己的模型,需要导入自己的模型+预训练权重
