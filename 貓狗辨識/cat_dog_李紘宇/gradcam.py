@@ -288,7 +288,7 @@ def main():
     model = CNNModel(input_shape=(3, img_size, img_size), num_classes=num_classes) # 定義CNNModel的物件，輸入通道數rgb為3、圖片大小、類別數
     model_path = "model_20.pth" # 設置權重文件的路徑，內包含訓練好的權重
     model.load_state_dict(torch.load(model_path)) # torch.load()將文件轉成字典，再用load_state_dict()將字典中的權重載入model
-    target_layers = [model.conv_layers[3]]
+    target_layers = [model.conv_layers[3]] # 設置要計算gradcam的層，model.conv_layers[3]指nn.Conv2d(32, 64, kernel_size=3, padding=1)
     #print(target_layers)
     
    # model = models.vgg16(pretrained=True)
