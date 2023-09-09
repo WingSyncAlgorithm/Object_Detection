@@ -285,9 +285,9 @@ def main():
 #使用vgg16网络
     img_size = 128  # 與訓練時相同的圖片尺寸
     num_classes = 2  # 貓和狗兩個類別
-    model = CNNModel(input_shape=(3, img_size, img_size), num_classes=num_classes) # 定義CNNModel的物件，輸入通道數rgb為3、圖片大小、類別
-    model_path = "model_20.pth"
-    model.load_state_dict(torch.load(model_path))
+    model = CNNModel(input_shape=(3, img_size, img_size), num_classes=num_classes) # 定義CNNModel的物件，輸入通道數rgb為3、圖片大小、類別數
+    model_path = "model_20.pth" # 設置權重文件的路徑，內包含訓練好的權重
+    model.load_state_dict(torch.load(model_path)) # torch.load()將文件轉成字典，再用load_state_dict()將字典中的權重載入model
     target_layers = [model.conv_layers[3]]
     #print(target_layers)
     
