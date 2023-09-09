@@ -45,13 +45,13 @@ class ActivationsAndGradients:
     """ Class for extracting activations and
     registering gradients from targeted intermediate layers """
 
-    def __init__(self, model, target_layers, reshape_transform):
-        self.model = model # 設定模型
-        self.gradients = [] # 初始化list，儲存梯度
-        self.activations = [] # 初始化list，儲存層的輸出值
-        self.reshape_transform = reshape_transform #
+    def __init__(self, model, target_layers, reshape_transform): # 在定義物件時，要輸入模型model(是class CNN的物件)，欲計算gradcam的層target_layers（是一個陣列），reshape_transformg是一個修改陣列形狀的函式
+        self.model = model # 設定模型為輸入的model
+        self.gradients = [] # 初始化list，用以儲存梯度
+        self.activations = [] # 初始化list，用以儲存層的輸出值
+        self.reshape_transform = reshape_transform # 設定修改陣列形狀的函式
         self.handles = [] # 設置一個list，用以儲存每次註冊鉤子函數的動作
-        for target_layer in target_layers: #跑遍欲處理的層
+        for target_layer in target_layers: # 跑遍欲處理的層
             self.handles.append(
                 target_layer.register_forward_hook(
                     self.save_activation)) # 將一個前向鉤子註冊到target_layer上，這個鉤子將在前向傳播過程中被觸發，並調用self.save_activation函式，保存輸出值
@@ -82,40 +82,40 @@ class ActivationsAndGradients:
             grad = self.reshape_transform(grad) # 修改grad形狀
         self.gradients = [grad.cpu().detach()] + self.gradients # 將梯度移到 CPU 上並分離出來，然後加入到gradients列表中
     #正向传播
-    def __call__(self, x):
+    def __call__(self, x): # 輸入圖片，輸出個類別機率
         self.gradients = []
         self.activations = []
         return self.model(x)
 
     def release(self):
-        for handle in self.handles:
+        for handle in self.handles: 遍歷所有鉤子
             handle.remove() # 將註冊的鉤子全部清除
 
 
 class GradCAM:
     def __init__(self,
-                 model,
-                 target_layers,
-                 reshape_transform=None,
-                 #使用不同的设备，默认使用gpu
+                 model, # 輸入模型model(是class CNN的物件)
+                 target_layers, # 欲計算gradcam的層target_layers（是一個陣列）
+                 reshape_transform=None, # 輸入調整陣列形狀的函式
+                 # 使用不同的设备，默认使用gpu
                  use_cuda=True):
-        self.model = model.eval()#模型设置为验证模式
-        self.target_layers = target_layers
-        self.reshape_transform = reshape_transform
-        self.cuda = use_cuda
-        if self.cuda:
-            self.model = model.cuda()
+        self.model = model.eval() # 模型设置为验证模式
+        self.target_layers = target_layers # 設置欲處理的層
+        self.reshape_transform = reshape_transform # 設定修改陣列形狀的函式
+        self.cuda = use_cuda # 是否使用gpu，True or False
+        if self.cuda: # 如果是True
+            self.model = model.cuda() # 使用gpu
         #ActivationsAndGradients正向传播获得的A和反向传播获得的A'
         self.activations_and_grads = ActivationsAndGradients(
-            self.model, target_layers, reshape_transform)
+            self.model, target_layers, reshape_transform) # 定義ActivationsAndGradients的物件
 
     """ Get a vector of weights for every channel in the target layer.
         Methods that return weights channels,
         will typically need to only implement this function. """
 
     @staticmethod
-    def get_cam_weights(grads):
-        return np.mean(grads, axis=(2, 3), keepdims=True)
+    def get_cam_weights(grads): #輸入梯度grads[batch,通道,寬,高]
+        return np.mean(grads, axis=(2, 3), keepdims=True) # 輸出特徵圖的每一點梯度的平均，並保持矩陣形狀為[batch,通道,1,1]
 
     @staticmethod
     def get_loss(output, target_category):
