@@ -298,8 +298,8 @@ def main():
     # load image，读取的图片
     img_path = "test.jpg"
     
-    test_image = cv2.imread(img_path)
-    test_image = cv2.resize(test_image, (img_size, img_size))
+    test_image = cv2.imread(img_path) # cv2.imread()返回一個包含圖像rgb像素值的 NumPy 三維陣列
+    test_image = cv2.resize(test_image, (img_size, img_size)) # 調整圖片大小至(img_size, img_size)
     test_image = cv2.cvtColor(test_image, cv2.COLOR_BGR2RGB)
     input_tensor = transforms.ToTensor()(test_image).unsqueeze(0)
 
