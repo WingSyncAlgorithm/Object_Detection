@@ -48,36 +48,39 @@ class ActivationsAndGradients:
     def __init__(self, model, target_layers, reshape_transform):
         self.model = model # 設定模型
         self.gradients = [] # 初始化list，儲存梯度
-        self.activations = [] # 初始化list，儲存特徵圖
+        self.activations = [] # 初始化list，儲存層的輸出值
         self.reshape_transform = reshape_transform #
-        self.handles = [] #
+        self.handles = [] # 設置一個list，用以儲存每次註冊鉤子函數的動作
         for target_layer in target_layers: #跑遍欲處理的層
             self.handles.append(
                 target_layer.register_forward_hook(
-                    self.save_activation)) #在handles中添加target_layers中每一層在前向傳播時註冊保存特徵圖鉤子函數的功能，
+                    self.save_activation)) # 將一個前向鉤子註冊到target_layer上，這個鉤子將在前向傳播過程中被觸發，並調用self.save_activation函式，保存輸出值
+                                           # 將註冊動作添加進handles
             # Backward compatibility with older pytorch versions:
             #这里的if语句主要处理的是pytorch版本兼容问题
-            if hasattr(target_layer, 'register_full_backward_hook'): #檢查target_layer物件中，有沒有註冊反向傳播鉤子函數的功能
+            if hasattr(target_layer, 'register_full_backward_hook'): # 檢查target_layer物件中，有沒有register_full_backward_hook函式，判別pytorch版本
                 self.handles.append(
                     target_layer.register_full_backward_hook(
-                        self.save_gradient))
+                        self.save_gradient)) # 註冊反向鉤子，反向傳播時，調用self.save_gradient函式，保存梯度
+                                             # 將註冊動作添加進handles
             else:
                 self.handles.append(
                     target_layer.register_backward_hook(
-                        self.save_gradient))
-#正向传播由底层流向高层
+                        self.save_gradient)) # 註冊反向鉤子，反向傳播時，調用self.save_gradient函式，保存梯度
+                                             # 將註冊動作添加進handles
+#正向傳播
     def save_activation(self, module, input, output):
         activation = output
         if self.reshape_transform is not None:
-            activation = self.reshape_transform(activation)
-        self.activations.append(activation.cpu().detach())
+            activation = self.reshape_transform(activation) # 修改activation形狀
+        self.activations.append(activation.cpu().detach()) # 輸出值轉移到 CPU 上，並且將其添加到self.activations列表中
 #反向传播有高层流向低层【保存的方式相反】
     def save_gradient(self, module, grad_input, grad_output):
         # Gradients are computed in reverse order
-        grad = grad_output[0]
+        grad = grad_output[0] # 取target_layer輸出的梯度
         if self.reshape_transform is not None:
-            grad = self.reshape_transform(grad)
-        self.gradients = [grad.cpu().detach()] + self.gradients
+            grad = self.reshape_transform(grad) # 修改grad形狀
+        self.gradients = [grad.cpu().detach()] + self.gradients # 將梯度移到 CPU 上並分離出來，然後加入到gradients列表中
     #正向传播
     def __call__(self, x):
         self.gradients = []
@@ -86,7 +89,7 @@ class ActivationsAndGradients:
 
     def release(self):
         for handle in self.handles:
-            handle.remove()
+            handle.remove() # 將註冊的鉤子全部清除
 
 
 class GradCAM:
