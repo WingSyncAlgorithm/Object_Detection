@@ -138,28 +138,42 @@ class GradCAM:
 
 
     def compute_cam_per_layer(self, input_tensor):
+        """
+        計算每層的 CAM。
+
+        :param input_tensor: 輸入張量。
+        :return: 一個列表，包含每層的 CAM。
+        """
         activations_list = [a.cpu().data.numpy()
-                            for a in self.activations_and_grads.activations]
+                            for a in self.activations_and_grads.activations]  # 取得每層的激活值
         grads_list = [g.cpu().data.numpy()
-                      for g in self.activations_and_grads.gradients]
-        target_size = self.get_target_width_height(input_tensor)
+                      for g in self.activations_and_grads.gradients]  # 取得每層的梯度值
+        target_size = self.get_target_width_height(input_tensor)  # 取得目標尺寸
 
-        cam_per_target_layer = []
-        # Loop over the saliency image from every layer
+        cam_per_target_layer = []  # 用於儲存每層的 CAM
 
-        for layer_activations, layer_grads in zip(activations_list, grads_list):
-            cam = self.get_cam_image(layer_activations, layer_grads)
-            cam[cam < 0] = 0  # works like mute the min-max scale in the function of scale_cam_image，相当于使用了relu激活函数
-            scaled = self.scale_cam_image(cam, target_size)
-            cam_per_target_layer.append(scaled[:, None, :])
+        
+        for layer_activations, layer_grads in zip(activations_list, grads_list): # 循環遍歷每層的激活值和梯度值
+            cam = self.get_cam_image(layer_activations, layer_grads)  # 計算 CAM
+            cam[cam < 0] = 0  # 將所有小於零的值變為零（相當於使用了 ReLU 激活函數）
+            scaled = self.scale_cam_image(cam, target_size)  # 尺寸縮放 CAM
+            cam_per_target_layer.append(scaled[:, None, :])  # 加入列表中
 
-        return cam_per_target_layer
+        return cam_per_target_layer  # 返回每層的 CAM
+
 
     def aggregate_multi_layers(self, cam_per_target_layer):
-        cam_per_target_layer = np.concatenate(cam_per_target_layer, axis=1)
-        cam_per_target_layer = np.maximum(cam_per_target_layer, 0)
-        result = np.mean(cam_per_target_layer, axis=1)
-        return self.scale_cam_image(result)
+        """
+        聚合多層 CAM 並對結果進行後處理。
+
+        :param cam_per_target_layer: 一個列表，包含了多層的 CAM。
+        :return: 經過聚合並後處理後的 CAM。
+        """
+        cam_per_target_layer = np.concatenate(cam_per_target_layer, axis=1)  # 將多層 CAM 進行水平連接
+        cam_per_target_layer = np.maximum(cam_per_target_layer, 0)  # 取最大值，並消除負值
+        result = np.mean(cam_per_target_layer, axis=1)  # 對每個目標進行平均
+        return self.scale_cam_image(result)  # 對聚合後的 CAM 進行尺寸縮放
+
 
     @staticmethod
     def scale_cam_image(cam, target_size=None):
