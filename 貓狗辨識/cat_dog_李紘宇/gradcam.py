@@ -300,16 +300,15 @@ def main():
     
     test_image = cv2.imread(img_path) # cv2.imread()返回一個包含圖像rgb像素值的 NumPy 三維陣列
     test_image = cv2.resize(test_image, (img_size, img_size)) # 調整圖片大小至(img_size, img_size)
-    test_image = cv2.cvtColor(test_image, cv2.COLOR_BGR2RGB)
-    input_tensor = transforms.ToTensor()(test_image).unsqueeze(0)
+    test_image = cv2.cvtColor(test_image, cv2.COLOR_BGR2RGB) # OpenCV 在預設情況下讀取的圖像格式是 BGR，所以需要將其轉換為 RGB 格式
+    input_tensor = transforms.ToTensor()(test_image).unsqueeze(0) 
+    # transforms.ToTensor(): 這是一個 PyTorch 的轉換函式，它將圖像轉換成張量格式。它會將像素值範圍從 [0, 255] 轉換到 [0, 1]
+    # .unsqueeze(0): 在張量的最前面（即第 0 維）添加一個維度。這是因為模型接受的輸入是一個批次（batch）的資料，所以需要在前面添加一個批次的維度。
 
-    cam = GradCAM(model=model, target_layers=target_layers, use_cuda=False)
-    #target_category = 281  # tabby, tabby cat（从imagenet1k_classes中找到对应的行数-1[从0开始]）
-    target_category = None  # pug, pug-dog
+    cam = GradCAM(model=model, target_layers=target_layers, use_cuda=False) #定義GradCAM的物件，輸入 : 模型、目標層、是否使用gpu
+    target_category = None  # 要計算哪個類別的gradcam，若是None，則計算機率最大的類別
 
     grayscale_cam = cam(input_tensor=input_tensor, target_category=target_category)
-    #print(test_image.size(),grayscale_cam.size())
-    #print(grayscale_cam)
     grayscale_cam = grayscale_cam[0, :]
     visualization = show_cam_on_image(test_image / 255., grayscale_cam, use_rgb=True)
     plt.imshow(visualization)
