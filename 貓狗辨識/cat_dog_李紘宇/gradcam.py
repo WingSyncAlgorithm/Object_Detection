@@ -46,18 +46,18 @@ class ActivationsAndGradients:
     registering gradients from targeted intermediate layers """
 
     def __init__(self, model, target_layers, reshape_transform):
-        self.model = model
-        self.gradients = []
-        self.activations = []
-        self.reshape_transform = reshape_transform
-        self.handles = []
-        for target_layer in target_layers:
+        self.model = model # 設定模型
+        self.gradients = [] # 初始化list，儲存梯度
+        self.activations = [] # 初始化list，儲存特徵圖
+        self.reshape_transform = reshape_transform #
+        self.handles = [] #
+        for target_layer in target_layers: #跑遍欲處理的層
             self.handles.append(
                 target_layer.register_forward_hook(
-                    self.save_activation))
+                    self.save_activation)) #在handles中添加target_layers中每一層在前向傳播時註冊保存特徵圖鉤子函數的功能，
             # Backward compatibility with older pytorch versions:
             #这里的if语句主要处理的是pytorch版本兼容问题
-            if hasattr(target_layer, 'register_full_backward_hook'):
+            if hasattr(target_layer, 'register_full_backward_hook'): #檢查target_layer物件中，有沒有註冊反向傳播鉤子函數的功能
                 self.handles.append(
                     target_layer.register_full_backward_hook(
                         self.save_gradient))
