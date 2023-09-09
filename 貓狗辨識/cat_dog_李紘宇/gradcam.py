@@ -285,7 +285,7 @@ def main():
 #使用vgg16网络
     img_size = 128  # 與訓練時相同的圖片尺寸
     num_classes = 2  # 貓和狗兩個類別
-    model = CNNModel(input_shape=(3, img_size, img_size), num_classes=num_classes)
+    model = CNNModel(input_shape=(3, img_size, img_size), num_classes=num_classes) # 定義CNNModel的物件，輸入通道數rgb為3、圖片大小、類別
     model_path = "model_20.pth"
     model.load_state_dict(torch.load(model_path))
     target_layers = [model.conv_layers[3]]
@@ -296,7 +296,7 @@ def main():
     #print([model.features])
     
     # load image，读取的图片
-    img_path = "test.jpg"
+    img_path = "test.jpg" # 設置圖片路徑
     
     test_image = cv2.imread(img_path) # cv2.imread()返回一個包含圖像rgb像素值的 NumPy 三維陣列
     test_image = cv2.resize(test_image, (img_size, img_size)) # 調整圖片大小至(img_size, img_size)
