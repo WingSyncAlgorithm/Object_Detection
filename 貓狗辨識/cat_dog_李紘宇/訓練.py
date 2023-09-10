@@ -75,7 +75,7 @@ class CNNModel(nn.Module):
             nn.Linear(conv_output_size * conv_output_size * 128, 64),
             nn.ReLU(),
             nn.Linear(64, num_classes),
-            nn.Softmax(dim=1)
+            #nn.Softmax(dim=1)
         )
 
     def forward(self, x):
@@ -156,7 +156,7 @@ def train_model(model, train_loader, test_loader, criterion, optimizer, num_epoc
     return model
 
 # 設置數據目錄和影像大小
-data_dir = "C:\\Users\\Jacky\\Desktop\\AI\\cat_dog\\dataset\\"  # 替換成包含"cat"和"dog"文件夾的數據集目錄
+data_dir = "..\\dataset\\"  # 替換成包含"cat"和"dog"文件夾的數據集目錄
 img_size = 128   # 替換成您想要的影像大小，例如128x128
 num_classes = 2  # 貓和狗兩個類別
 

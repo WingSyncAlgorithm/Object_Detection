@@ -119,26 +119,27 @@ class GradCAM:
 
     @staticmethod
     def get_loss(output, target_category):
-    """
-    計算損失函數。
+        """
+        將預測圖作为loss回传
 
-    :param output: 模型的輸出。
-    :param target_category: 目標類別的索引。
-    :return: 損失值。
-    """
+        :param output: 模型的輸出。
+        :param target_category: 目標類別的索引。
+        :return: 損失值。
+        """
         loss = 0  # 初始化損失
         for i in range(len(target_category)):
-            loss = loss + output[i, target_category[i]]
+            print(output)
+            loss = loss + output[i, target_category[i]] # output[i, target_category[i]]表示輸出層第i類的輸出值
         return loss
 
     def get_cam_image(self, activations, grads):
-    """
-    獲取 CAM 圖像。
+        """
+        獲取 CAM 圖像。
 
-    :param activations: 特徵圖。
-    :param grads: 梯度值。
-    :return: CAM 圖像。
-    """
+        :param activations: 特徵圖。
+        :param grads: 梯度值。
+        :return: CAM 圖像。
+        """
         weights = self.get_cam_weights(grads)  # 獲取 CAM 權重
         weighted_activations = weights * activations  # 權重乘以特徵圖
         cam = weighted_activations.sum(axis=1)  # 對通道進行總和，獲得 CAM 圖像
@@ -212,9 +213,11 @@ class GradCAM:
         output = self.activations_and_grads(input_tensor) # 將圖片輸入self.activations_and_grads()，執行class ActivationsAndGradients中的__call__，輸出神經網路輸出層的輸出值
         if isinstance(target_category, int):
             target_category = [target_category] * input_tensor.size(0)
+            print(target_category)
 
         if target_category is None:
             target_category = np.argmax(output.cpu().data.numpy(), axis=-1) 
+            print(target_category)
             '''
             output: 這是模型的輸出，通常是一個 PyTorch 張量
             .cpu(): 將張量移到 CPU 上進行後續操作（如果之前在 GPU 上進行了計算）。
@@ -226,9 +229,9 @@ class GradCAM:
         else:
             assert (len(target_category) == input_tensor.size(0))
 
-        self.model.zero_grad()#清空历史梯度信息
-        loss = self.get_loss(output, target_category)
-        loss.backward(retain_graph=True)#捕获对应的梯度信息并进行保存
+        self.model.zero_grad() # 清空历史梯度信息
+        loss = self.get_loss(output, target_category) # 獲取輸出層的輸出值，當作loss
+        loss.backward(retain_graph=True) # 把輸出值當loss作反向傳播
 
         # In most of the saliency attribution papers, the saliency is
         # computed with a single target layer.
@@ -242,15 +245,15 @@ class GradCAM:
         cam_per_layer = self.compute_cam_per_layer(input_tensor)
         return self.aggregate_multi_layers(cam_per_layer)
 
-    def __del__(self):
+    def __del__(self): # 類別實例被銷毀時執行的方法。釋放相關資源
         self.activations_and_grads.release()
 
-    def __enter__(self):
+    def __enter__(self): # 進入 with block 時執行的方法。返回實例本身
         return self
 
-    def __exit__(self, exc_type, exc_value, exc_tb):
+    def __exit__(self, exc_type, exc_value, exc_tb): # 離開 with block 時執行的方法，釋放相關資源
         self.activations_and_grads.release()
-        if isinstance(exc_value, IndexError):
+        if isinstance(exc_value, IndexError): # 檢查變數 exc_value 是否屬於 IndexError 類型
             # Handle IndexError here...
             print(
                 f"An exception occurred in CAM with block: {exc_type}. Message: {exc_value}")
@@ -332,7 +335,7 @@ def main():
     #print([model.features])
     
     # load image，读取的图片
-    img_path = "test.jpg" # 設置圖片路徑
+    img_path = "test2.jpg" # 設置圖片路徑
     
     test_image = cv2.imread(img_path) # cv2.imread()返回一個包含圖像rgb像素值的 NumPy 三維陣列
     test_image = cv2.resize(test_image, (img_size, img_size)) # 調整圖片大小至(img_size, img_size)
