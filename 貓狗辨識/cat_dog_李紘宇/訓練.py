@@ -47,12 +47,18 @@ class CustomDataset(Dataset): # 繼承Dataset
         labels = np.array(labels)
         return data, labels
 
-    def __len__(self):
+    def __len__(self): # 獲取資料量
         return len(self.data)
 
     def __getitem__(self, index):
-        img = self.data[index]
-        label = self.labels[index]
+        """
+        根據索引取得資料集中的一個樣本。
+
+        :param index: 樣本的索引。
+        :return: 返回樣本的圖片和標籤。
+        """
+        img = self.data[index]  # 取得圖片資料
+        label = self.labels[index]  # 取得標籤資料
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # OpenCV讀取的圖片是BGR順序，轉換為RGB順序
         img = transforms.ToTensor()(img)  # 將圖片轉換成PyTorch的Tensor格式
         label = torch.tensor(label, dtype=torch.long)  # 將標籤資料轉換為Long型態
@@ -98,40 +104,43 @@ def train_model(model, train_loader, test_loader, criterion, optimizer, num_epoc
     train_accuracies = []
     test_accuracies = []
 
-    for epoch in range(num_epochs):
-        model.train()
+    for epoch in range(num_epochs): # 跑num_epochs個epoch
+        model.train() # 轉訓練模式
+        # 準確度、損失初始化
         train_loss = 0.0
         correct_train = 0
         total_train = 0
         for inputs, labels in train_loader:
-            optimizer.zero_grad()
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
-            train_loss += loss.item()
-            _, predicted = torch.max(outputs.data, 1)
-            total_train += labels.size(0)
-            correct_train += (predicted == labels).sum().item()
+            optimizer.zero_grad() # 清除梯度
+            outputs = model(inputs) # 把訓練圖片傳入模型，輸出輸出層值
+            loss = criterion(outputs, labels) # 計算此次傳播的損失
+            loss.backward() # 反向傳播
+            optimizer.step() # 執行優化器，更新模型的參數
+            
+            train_loss += loss.item() # 更新訓練損失（Accumulate the training loss）
+            _, predicted = torch.max(outputs.data, 1) # 計算預測值（Compute predictions）
+            total_train += labels.size(0) # 累計訓練樣本數（Accumulate total training samples）
+            correct_train += (predicted == labels).sum().item() # 累計正確預測數（Accumulate correct predictions）
 
-        train_loss /= len(train_loader)
-        train_accuracy = correct_train / total_train
 
-        model.eval()
+        train_loss /= len(train_loader) # 將訓練的資料的loss做平均
+        train_accuracy = correct_train / total_train # 將訓練的資料的accuracy做平均
+
+        model.eval() # 轉評估模式
         test_loss = 0.0
         correct_test = 0
         total_test = 0
-        with torch.no_grad():
+        with torch.no_grad(): # 不進行反向傳播
             for inputs, labels in test_loader:
-                outputs = model(inputs)
-                loss = criterion(outputs, labels)
-                test_loss += loss.item()
-                _, predicted = torch.max(outputs.data, 1)
-                total_test += labels.size(0)
-                correct_test += (predicted == labels).sum().item()
+                outputs = model(inputs) # 把驗證圖片傳入模型，輸出輸出層值
+                loss = criterion(outputs, labels) # 計算此次傳播的損失
+                test_loss += loss.item() # 更新驗證損失
+                _, predicted = torch.max(outputs.data, 1) # 計算預測值
+                total_test += labels.size(0) # 累計驗證樣本數
+                correct_test += (predicted == labels).sum().item() # 累計正確預測數
 
-        test_loss /= len(test_loader)
-        test_accuracy = correct_test / total_test
+        test_loss /= len(test_loader) # 將驗證的資料的loss做平均
+        test_accuracy = correct_test / total_test # 將驗證的資料的accuracy做平均
 
         print(f'Epoch [{epoch + 1}/{num_epochs}], '
               f'Train Loss: {train_loss:.4f}, Train Accuracy: {train_accuracy:.4f}, '
@@ -170,7 +179,7 @@ num_classes = 2  # 貓和狗兩個類別
 
 # 載入數據集並預處理
 dataset = CustomDataset(data_dir, img_size, num_classes)
-data_loader = DataLoader(dataset, batch_size=32, shuffle=True)
+data_loader = DataLoader(dataset, batch_size=32, shuffle=True) # 以32張作批次處理
 
 # 建立模型
 input_shape = (3, img_size, img_size)  # 假設圖像大小為img_size x img_size，且為RGB影像（3通道）
