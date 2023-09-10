@@ -9,7 +9,6 @@ from torch.utils.data import Dataset, DataLoader
 from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.model_selection import train_test_split
 '''
 訓練資料的資料夾結構(各資料夾名稱可自訂):
 data_folder
