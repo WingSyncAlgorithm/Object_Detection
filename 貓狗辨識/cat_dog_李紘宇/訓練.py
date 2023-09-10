@@ -9,6 +9,7 @@ from torch.utils.data import Dataset, DataLoader
 from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
 import seaborn as sns
+from sklearn.model_selection import train_test_split
 '''
 訓練資料的資料夾結構(各資料夾名稱可自訂):
 data_folder
@@ -173,13 +174,30 @@ def train_model(model, train_loader, test_loader, criterion, optimizer, num_epoc
     return model
 
 # 設置數據目錄和影像大小
-data_dir = "..\\dataset\\"  # 替換成包含"cat"和"dog"文件夾的數據集目錄
+data_dir = "dataset\\"  # 替換成包含"cat"和"dog"文件夾的數據集目錄
 img_size = 128   # 替換成您想要的影像大小，例如128x128
 num_classes = 2  # 貓和狗兩個類別
 
+
 # 載入數據集並預處理
+# 創建 CustomDataset 對象
 dataset = CustomDataset(data_dir, img_size, num_classes)
-data_loader = DataLoader(dataset, batch_size=32, shuffle=True) # 以32張作批次處理，shuffle=True打亂資料
+# 將數據集拆分為訓練集和測試集（80% 訓練，20% 測試）
+train_dataset, test_dataset = train_test_split(dataset, test_size=0.2, random_state=42) #只要random_state值不變，每次運行時的資料劃分都會一樣，test_size=0.2表示劃分0.2的比例為test數據集
+
+# 再將訓練集拆分為訓練集和驗證集（60% 訓練，20% 驗證）
+train_dataset, val_dataset = train_test_split(train_dataset, test_size=0.25, random_state=42)
+
+#最終數據集大小，訓練:驗證:測試=0.6:0.2:0.2
+
+# 使用 DataLoader 封裝訓練集、驗證集和測試集
+# DataLoader 用於將資料集封裝成一個可以迭代的物件，也就是可以用for來按照批次進行載入，進行訓練
+train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True) # 以32張作批次處理，shuffle=True打亂資料
+val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
+test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
+
+
+
 
 # 建立模型
 input_shape = (3, img_size, img_size)  # 假設圖像大小為img_size x img_size，且為RGB影像（3通道）
@@ -191,14 +209,12 @@ optimizer = optim.Adam(model.parameters())
 
 # 訓練模型並繪製曲線
 num_epochs = 10
-model = train_model(model, data_loader, data_loader, criterion, optimizer, num_epochs)
+model = train_model(model, train_loader, val_loader, criterion, optimizer, num_epochs)
 
 # 保存訓練好的模型
 torch.save(model.state_dict(), "model.pth")
 
-# 載入測試集並繪製混淆矩陣
-test_dataset = CustomDataset(data_dir, img_size, num_classes)
-test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
+# 繪製混淆矩陣
 
 model.eval()
 y_true = []
@@ -221,9 +237,9 @@ with torch.no_grad():
         '''
 
 # 畫confusion_matrix
-cm = confusion_matrix(y_true, y_pred)
+cm = confusion_matrix(y_true, y_pred, normalize='true') # normalize='true':將confusion_matrix內的值歸一化
 plt.figure(figsize=(5, 5))
-sns.heatmap(cm, annot=True, cmap='Blues', fmt='d')
+sns.heatmap(cm, annot=True, cmap='Blues', fmt='.2f')  # fmt='.2f' 顯示為浮點數，保留兩位小數
 plt.xlabel('Predicted Label')
 plt.ylabel('True Label')
 plt.title('Confusion Matrix')
