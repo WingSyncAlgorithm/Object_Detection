@@ -199,8 +199,8 @@ class GradCAM:
         # This gives you more flexibility in case you just want to
         # use all conv layers for example, all Batchnorm layers,
         # or something else.
-        cam_per_layer = self.compute_cam_per_layer(input_tensor) # 獲取多層的gradcam
-        return self.aggregate_multi_layers(cam_per_layer) # 把多層gradcam做平均
+        cam_per_layer = self.compute_cam_per_layer(input_tensor)
+        return self.aggregate_multi_layers(cam_per_layer)
 
     def __del__(self):
         self.activations_and_grads.release()
@@ -302,18 +302,11 @@ def main():
     #target_category = 281  # tabby, tabby cat（从imagenet1k_classes中找到对应的行数-1[从0开始]）
     target_category = None  # pug, pug-dog
 
-<<<<<<< HEAD
     grayscale_cam = cam(input_tensor=input_tensor, target_category=target_category)
     #print(test_image.size(),grayscale_cam.size())
     #print(grayscale_cam)
     grayscale_cam = grayscale_cam[0, :]
     visualization = show_cam_on_image(test_image / 255., grayscale_cam, use_rgb=True)
     plt.imshow(visualization)
-=======
-    grayscale_cam = cam(input_tensor=input_tensor, target_category=target_category) # 執行GradCAM中的__call__，獲取gradcam
-    grayscale_cam = grayscale_cam[0, :] # 我們不需要一維資料，並取出gradcam
-    visualization = show_cam_on_image(test_image / 255., grayscale_cam, use_rgb=True) # 丟進show_cam_on_image(測試圖片每個像素質都除以255,gradcam圖,圖片是否是rgb)
-    plt.imshow(visualization) # 顯示圖片
->>>>>>> 李紘宇+註解
     plt.show()
 main()
