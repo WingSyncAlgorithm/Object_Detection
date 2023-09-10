@@ -242,8 +242,8 @@ class GradCAM:
         # This gives you more flexibility in case you just want to
         # use all conv layers for example, all Batchnorm layers,
         # or something else.
-        cam_per_layer = self.compute_cam_per_layer(input_tensor)
-        return self.aggregate_multi_layers(cam_per_layer)
+        cam_per_layer = self.compute_cam_per_layer(input_tensor) # 獲取多層的gradcam
+        return self.aggregate_multi_layers(cam_per_layer) # 把多層gradcam做平均
 
     def __del__(self): # 類別實例被銷毀時執行的方法。釋放相關資源
         self.activations_and_grads.release()
@@ -347,8 +347,8 @@ def main():
     cam = GradCAM(model=model, target_layers=target_layers, use_cuda=False) #定義GradCAM的物件，輸入 : 模型、目標層、是否使用gpu
     target_category = None  # 要計算哪個類別的gradcam，若是None，則計算機率最大的類別
 
-    grayscale_cam = cam(input_tensor=input_tensor, target_category=target_category) # 執行GradCAM中的__call__，獲得輸出層的值，形狀是[[x x]]
-    grayscale_cam = grayscale_cam[0, :] # 取出grayscale_cam的[x x]
+    grayscale_cam = cam(input_tensor=input_tensor, target_category=target_category) # 執行GradCAM中的__call__，獲取gradcam
+    grayscale_cam = grayscale_cam[0, :] # 我們不需要一維資料，並取出gradcam
     visualization = show_cam_on_image(test_image / 255., grayscale_cam, use_rgb=True) # 丟進show_cam_on_image(測試圖片每個像素質都除以255,gradcam圖,圖片是否是rgb)
     plt.imshow(visualization) # 顯示圖片
     plt.show()
