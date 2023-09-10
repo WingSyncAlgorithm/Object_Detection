@@ -70,7 +70,7 @@ class ActivationsAndGradients:
                                              # 將註冊動作添加進handles
 #正向傳播
     def save_activation(self, module, input, output):
-        activation = output
+        activation = output #獲取模型輸出值
         if self.reshape_transform is not None:
             activation = self.reshape_transform(activation) # 修改activation形狀
         self.activations.append(activation.cpu().detach()) # 輸出值轉移到 CPU 上，並且將其添加到self.activations列表中
