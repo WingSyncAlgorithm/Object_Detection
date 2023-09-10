@@ -181,22 +181,14 @@ num_classes = 2  # 貓和狗兩個類別
 
 # 載入數據集並預處理
 # 創建 CustomDataset 對象
-dataset = CustomDataset(data_dir, img_size, num_classes)
-# 將數據集拆分為訓練集和測試集（80% 訓練，20% 測試）
-train_dataset, test_dataset = train_test_split(dataset, test_size=0.2, random_state=42) #只要random_state值不變，每次運行時的資料劃分都會一樣，test_size=0.2表示劃分0.2的比例為test數據集
-
-# 再將訓練集拆分為訓練集和驗證集（60% 訓練，20% 驗證）
-train_dataset, val_dataset = train_test_split(train_dataset, test_size=0.25, random_state=42)
-
-#最終數據集大小，訓練:驗證:測試=0.6:0.2:0.2
-
+train_dataset = CustomDataset("train\\", img_size, num_classes)
+val_dataset = CustomDataset("test\\", img_size, num_classes)
+test_dataset = CustomDataset("val\\", img_size, num_classes)
 # 使用 DataLoader 封裝訓練集、驗證集和測試集
 # DataLoader 用於將資料集封裝成一個可以迭代的物件，也就是可以用for來按照批次進行載入，進行訓練
 train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True) # 以32張作批次處理，shuffle=True打亂資料
-val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
-test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
-
-
+val_loader = DataLoader(val_dataset, batch_size=32, shuffle=True)
+test_loader = DataLoader(test_dataset, batch_size=32, shuffle=True)
 
 
 # 建立模型
