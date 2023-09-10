@@ -9,31 +9,39 @@ from torch.utils.data import Dataset, DataLoader
 from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
 import seaborn as sns
-
-class CustomDataset(Dataset):
-    def __init__(self, data_dir, img_size, num_classes):
-        self.data_dir = data_dir
-        self.img_size = img_size
-        self.num_classes = num_classes
-        self.categories = ["cat", "dog"]
-        self.data, self.labels = self.load_data()
+'''
+訓練資料的資料夾結構(各資料夾名稱可自訂):
+data_folder
+    cat
+        *.jpg
+    dog
+        *.jpg
+    ...
+'''
+class CustomDataset(Dataset): # 繼承Dataset
+    def __init__(self, data_dir, img_size, num_classes): # 定義物件時，會執行的初始化函式
+        self.data_dir = data_dir # 設置訓練資料的位置
+        self.img_size = img_size # 設置圖片大小
+        self.num_classes = num_classes # 設置類的數量
+        self.categories = ["cat", "dog"] # 訓練資料放置的資料夾名稱
+        self.data, self.labels = self.load_data() # 把所有訓練圖片放入data,label放入labels
 
     def load_data(self):
         data = []
         labels = []
-        for category in self.categories:
-            path = os.path.join(self.data_dir, category)
-            label = self.categories.index(category)
-            for img_name in os.listdir(path):
-                img_path = os.path.join(path, img_name)
+        for category in self.categories: # 跑遍所有類
+            path = os.path.join(self.data_dir, category) # 把路徑加起來，得到各類資料夾的路徑
+            label = self.categories.index(category) # 找出category在self.categories中的索引，ex:貓是0,狗是1
+            for img_name in os.listdir(path): # 跑遍所有圖片
+                img_path = os.path.join(path, img_name) # 獲取圖片的路徑
                 print("Loading:", img_path)  # 為了除錯而印出圖像路徑
-                img = cv2.imread(img_path)
+                img = cv2.imread(img_path) # 讀取圖片
                 if img is None:
                     print("Error loading:", img_path)
                     continue  # 如果讀取失敗，則跳過該圖像
-                img = cv2.resize(img, (self.img_size, self.img_size))
-                data.append(img)
-                labels.append(label)
+                img = cv2.resize(img, (self.img_size, self.img_size)) #將所有圖片都縮放成相同大小
+                data.append(img) # 把圖片放進去
+                labels.append(label) # 把label放進去
 
         data = np.array(data)
         labels = np.array(labels)
