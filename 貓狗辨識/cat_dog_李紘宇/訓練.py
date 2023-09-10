@@ -179,7 +179,7 @@ num_classes = 2  # 貓和狗兩個類別
 
 # 載入數據集並預處理
 dataset = CustomDataset(data_dir, img_size, num_classes)
-data_loader = DataLoader(dataset, batch_size=32, shuffle=True) # 以32張作批次處理
+data_loader = DataLoader(dataset, batch_size=32, shuffle=True) # 以32張作批次處理，shuffle=True打亂資料
 
 # 建立模型
 input_shape = (3, img_size, img_size)  # 假設圖像大小為img_size x img_size，且為RGB影像（3通道）
@@ -205,15 +205,26 @@ y_true = []
 y_pred = []
 with torch.no_grad():
     for inputs, labels in test_loader:
-        outputs = model(inputs)
-        _, predicted = torch.max(outputs.data, 1)
-        y_true.extend(labels.cpu().numpy())
+        outputs = model(inputs) # 把測試圖片傳入模型，輸出輸出層值
+        _, predicted = torch.max(outputs.data, 1) # 使用 torch.max() 函數計算出每個樣本的預測值，並將其儲存為 predicted
+        # 將真實值和預測值附加到對應的列表中
+        y_true.extend(labels.cpu().numpy()) 
         y_pred.extend(predicted.cpu().numpy())
+        '''
+        labels: 這是一個包含了一個批次中所有樣本的真實標籤的 PyTorch 張量。
 
+        labels.cpu(): 將這個張量轉移到 CPU 上進行後續的處理。
+
+        .numpy(): 將這個 PyTorch 張量轉換成 NumPy 陣列。
+
+        y_true.extend(...): 將這個 NumPy 陣列中的元素添加到 y_true 這個列表的末尾。
+        '''
+
+# 畫confusion_matrix
 cm = confusion_matrix(y_true, y_pred)
 plt.figure(figsize=(5, 5))
 sns.heatmap(cm, annot=True, cmap='Blues', fmt='d')
 plt.xlabel('Predicted Label')
 plt.ylabel('True Label')
 plt.title('Confusion Matrix')
-plt.show()
+plt.show() # 顯示
