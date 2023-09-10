@@ -9,37 +9,37 @@ from torchvision import models#直接从官方的torchvision中到入库
 from torchvision import transforms
 import torch.nn as nn
 
-class CNNModel(nn.Module):
+class CNNModel(nn.Module): # 定義class CNNModel，並繼承torch.nn.Module
     def __init__(self, input_shape, num_classes):
         super(CNNModel, self).__init__()
         self.conv_layers = nn.Sequential(
-            nn.Conv2d(3, 32, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(2),
+            nn.Conv2d(3, 32, kernel_size=3, padding=1), # 3通道(rgb)輸入,輸出32個特徵圖,使用3*3kernel,輸出的圖周圍補一格0
+            nn.ReLU(), # 負值變0
+            nn.MaxPool2d(2), # 2*2方格取最大值
 
-            nn.Conv2d(32, 64, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(2),
+            nn.Conv2d(32, 64, kernel_size=3, padding=1), # 32通道輸入上一層輸出的32張圖,輸出64個特徵圖,使用3*3kernel,輸出的圖周圍補一格0
+            nn.ReLU(), # 負值變0
+            nn.MaxPool2d(2), # 2*2方格取最大值
 
-            nn.Conv2d(64, 128, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(2)
+            nn.Conv2d(64, 128, kernel_size=3, padding=1), # 64通道輸入上一層輸出的64張圖,輸出128個特徵圖,使用3*3kernel,輸出的圖周圍補一格0
+            nn.ReLU(), # 負值變0
+            nn.MaxPool2d(2) # 2*2方格取最大值
         )
 
         # 計算全連接層的輸入尺寸
-        conv_output_size = input_shape[1] // 2 // 2 // 2  # 在三次池化後的影像尺寸
-        self.fc_layers = nn.Sequential(
-            nn.Flatten(),
-            nn.Linear(conv_output_size * conv_output_size * 128, 64),
-            nn.ReLU(),
-            nn.Linear(64, num_classes),
-            nn.Softmax(dim=1)
+        conv_output_size = input_shape[1] // 2 // 2 // 2  # 在三次池化後的影像尺寸，因為做了三次2*2的MaxPooling
+        self.fc_layers = nn.Sequential( # 定義全連接層
+            nn.Flatten(), # 把所有特徵圖，降成一維張量
+            nn.Linear(conv_output_size * conv_output_size * 128, 64), # 接一層神經元，輸入通道數=128張特徵圖的總像素量，輸出64個通道
+            nn.ReLU(), # 接讓負值變0的神經元，輸出與輸入輸量相同
+            nn.Linear(64, num_classes), # 這是輸出層，將上一層輸出的64個輸出值，各類別可能性大小
+            # nn.Softmax(dim=1)
         )
 
     def forward(self, x):
-        x = self.conv_layers(x)
-        x = self.fc_layers(x)
-        return x
+        x = self.conv_layers(x) # 正向傳播經過卷積層
+        x = self.fc_layers(x) # 正向傳播經過全連接層
+        return x # 輸出輸出層的值
 
 class ActivationsAndGradients:
     """ Class for extracting activations and
@@ -85,7 +85,7 @@ class ActivationsAndGradients:
     def __call__(self, x): # 輸入圖片，輸出個類別機率
         self.gradients = []
         self.activations = []
-        return self.model(x)
+        return self.model(x) # 正向傳播,輸出輸出層的值
 
     def release(self):
         for handle in self.handles: # 遍歷所有鉤子
@@ -164,7 +164,7 @@ class GradCAM:
                             for a in self.activations_and_grads.activations]  # 取得每層的激活值
         grads_list = [g.cpu().data.numpy()
                       for g in self.activations_and_grads.gradients]  # 取得每層的梯度值
-        target_size = self.get_target_width_height(input_tensor)  # 取得目標尺寸
+        target_size = self.get_target_width_height(input_tensor)  # 取得圖片張量尺寸
 
         cam_per_target_layer = []  # 用於儲存每層的 CAM
 
@@ -347,9 +347,9 @@ def main():
     cam = GradCAM(model=model, target_layers=target_layers, use_cuda=False) #定義GradCAM的物件，輸入 : 模型、目標層、是否使用gpu
     target_category = None  # 要計算哪個類別的gradcam，若是None，則計算機率最大的類別
 
-    grayscale_cam = cam(input_tensor=input_tensor, target_category=target_category)
-    grayscale_cam = grayscale_cam[0, :]
-    visualization = show_cam_on_image(test_image / 255., grayscale_cam, use_rgb=True)
-    plt.imshow(visualization)
+    grayscale_cam = cam(input_tensor=input_tensor, target_category=target_category) # 執行GradCAM中的__call__，獲得輸出層的值，形狀是[[x x]]
+    grayscale_cam = grayscale_cam[0, :] # 取出grayscale_cam的[x x]
+    visualization = show_cam_on_image(test_image / 255., grayscale_cam, use_rgb=True) # 丟進show_cam_on_image(測試圖片每個像素質都除以255,gradcam圖,圖片是否是rgb)
+    plt.imshow(visualization) # 顯示圖片
     plt.show()
 main()
