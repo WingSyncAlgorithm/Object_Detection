@@ -85,7 +85,7 @@ class ActivationsAndGradients:
     def __call__(self, x): # 輸入圖片，輸出個類別機率
         self.gradients = []
         self.activations = []
-        return self.model(x)
+        return self.model(x) # 正向傳播,輸出輸出層的值
 
     def release(self):
         for handle in self.handles: # 遍歷所有鉤子
@@ -164,7 +164,7 @@ class GradCAM:
                             for a in self.activations_and_grads.activations]  # 取得每層的激活值
         grads_list = [g.cpu().data.numpy()
                       for g in self.activations_and_grads.gradients]  # 取得每層的梯度值
-        target_size = self.get_target_width_height(input_tensor)  # 取得目標尺寸
+        target_size = self.get_target_width_height(input_tensor)  # 取得圖片張量尺寸
 
         cam_per_target_layer = []  # 用於儲存每層的 CAM
 
@@ -347,9 +347,9 @@ def main():
     cam = GradCAM(model=model, target_layers=target_layers, use_cuda=False) #定義GradCAM的物件，輸入 : 模型、目標層、是否使用gpu
     target_category = None  # 要計算哪個類別的gradcam，若是None，則計算機率最大的類別
 
-    grayscale_cam = cam(input_tensor=input_tensor, target_category=target_category)
-    grayscale_cam = grayscale_cam[0, :]
-    visualization = show_cam_on_image(test_image / 255., grayscale_cam, use_rgb=True)
-    plt.imshow(visualization)
+    grayscale_cam = cam(input_tensor=input_tensor, target_category=target_category) # 執行GradCAM中的__call__，獲得輸出層的值，形狀是[[x x]]
+    grayscale_cam = grayscale_cam[0, :] # 取出grayscale_cam的[x x]
+    visualization = show_cam_on_image(test_image / 255., grayscale_cam, use_rgb=True) # 丟進show_cam_on_image(測試圖片每個像素質都除以255,gradcam圖,圖片是否是rgb)
+    plt.imshow(visualization) # 顯示圖片
     plt.show()
 main()
