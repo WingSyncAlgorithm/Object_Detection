@@ -119,17 +119,32 @@ class GradCAM:
 
     @staticmethod
     def get_loss(output, target_category):
-        loss = 0 # 初始化loss
+    """
+    計算損失函數。
+
+    :param output: 模型的輸出。
+    :param target_category: 目標類別的索引。
+    :return: 損失值。
+    """
+        loss = 0  # 初始化損失
         for i in range(len(target_category)):
-            loss = loss + output[i, target_category[i]]#当前第i张图片获取的类别索引（感兴趣的类别值）
+            loss = loss + output[i, target_category[i]]
         return loss
 
     def get_cam_image(self, activations, grads):
-        weights = self.get_cam_weights(grads)
-        weighted_activations = weights * activations
-        cam = weighted_activations.sum(axis=1)
+    """
+    獲取 CAM 圖像。
+
+    :param activations: 特徵圖。
+    :param grads: 梯度值。
+    :return: CAM 圖像。
+    """
+        weights = self.get_cam_weights(grads)  # 獲取 CAM 權重
+        weighted_activations = weights * activations  # 權重乘以特徵圖
+        cam = weighted_activations.sum(axis=1)  # 對通道進行總和，獲得 CAM 圖像
 
         return cam
+
 
     @staticmethod
     def get_target_width_height(input_tensor):
