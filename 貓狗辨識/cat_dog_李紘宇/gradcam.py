@@ -190,17 +190,24 @@ class GradCAM:
 
     def __call__(self, input_tensor, target_category=None):
 
-        if self.cuda:
-            input_tensor = input_tensor.cuda()
+        if self.cuda: # 判斷是否使用gpu
+            input_tensor = input_tensor.cuda() # 將PyTorch 張量 input_tensor 移動到 GPU 上
 
         # 正向传播得到网络输出logits(未经过softmax)
-        output = self.activations_and_grads(input_tensor)
+        output = self.activations_and_grads(input_tensor) # 將圖片輸入self.activations_and_grads()，執行class ActivationsAndGradients中的__call__，輸出神經網路輸出層的輸出值
         if isinstance(target_category, int):
             target_category = [target_category] * input_tensor.size(0)
 
         if target_category is None:
-            target_category = np.argmax(output.cpu().data.numpy(), axis=-1)
-            print(f"category id: {target_category}")
+            target_category = np.argmax(output.cpu().data.numpy(), axis=-1) 
+            '''
+            output: 這是模型的輸出，通常是一個 PyTorch 張量
+            .cpu(): 將張量移到 CPU 上進行後續操作（如果之前在 GPU 上進行了計算）。
+            .data: 獲取張量的數據部分，不包括梯度信息。
+            .numpy(): 將數據轉換為 NumPy 陣列。
+            np.argmax(..., axis=-1): 在最後一個維度上進行最大值的尋找，輸出索引。
+            '''
+            print(f"category id: {target_category}") # 輸出最可能的類別
         else:
             assert (len(target_category) == input_tensor.size(0))
 
