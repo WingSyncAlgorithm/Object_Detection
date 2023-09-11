@@ -30,9 +30,9 @@ os.makedirs(val_dir, exist_ok=True)
 os.makedirs(test_dir, exist_ok=True)
 
 # 定义拆分比例
-train_ratio = 0.6
-val_ratio = 0.2
-test_ratio = 0.2
+train_ratio = 0.8
+val_ratio = 0.1
+test_ratio = 0.1
 
 # 遍历数据集目录
 for category in os.listdir(dataset_dir):
