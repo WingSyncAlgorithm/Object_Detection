@@ -180,7 +180,7 @@ num_classes = 23  # 貓和狗兩個類別
 
 # 載入數據集並預處理
 # 創建 CustomDataset 對象
-train_dataset = CustomDataset("train\\", img_size, num_classes)
+train_dataset = CustomDataset("train_processed\\", img_size, num_classes)
 val_dataset = CustomDataset("test\\", img_size, num_classes)
 test_dataset = CustomDataset("val\\", img_size, num_classes)
 # 使用 DataLoader 封裝訓練集、驗證集和測試集
