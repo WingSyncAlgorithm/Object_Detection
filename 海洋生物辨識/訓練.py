@@ -69,15 +69,15 @@ class CNNModel(nn.Module): # 定義class CNNModel，並繼承torch.nn.Module
     def __init__(self, input_shape, num_classes):
         super(CNNModel, self).__init__()
         self.conv_layers = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=3, padding=1), # 3通道(rgb)輸入,輸出32個特徵圖,使用3*3kernel,輸出的圖周圍補一格0
+            nn.Conv2d(3, 32, kernel_size=3, padding=1), # 3通道(rgb)輸入,輸出32個特徵圖,使用3*3kernel,輸出的圖周圍補一格0
             nn.ReLU(), # 負值變0
             nn.MaxPool2d(2), # 2*2方格取最大值
 
-            nn.Conv2d(64, 128, kernel_size=3, padding=1), # 32通道輸入上一層輸出的32張圖,輸出64個特徵圖,使用3*3kernel,輸出的圖周圍補一格0
+            nn.Conv2d(32, 64, kernel_size=3, padding=1), # 32通道輸入上一層輸出的32張圖,輸出64個特徵圖,使用3*3kernel,輸出的圖周圍補一格0
             nn.ReLU(), # 負值變0
             nn.MaxPool2d(2), # 2*2方格取最大值
 
-            nn.Conv2d(128, 256, kernel_size=3, padding=1), # 64通道輸入上一層輸出的64張圖,輸出128個特徵圖,使用3*3kernel,輸出的圖周圍補一格0
+            nn.Conv2d(64, 128, kernel_size=3, padding=1), # 64通道輸入上一層輸出的64張圖,輸出128個特徵圖,使用3*3kernel,輸出的圖周圍補一格0
             nn.ReLU(), # 負值變0
             nn.MaxPool2d(2) # 2*2方格取最大值
         )
@@ -86,14 +86,10 @@ class CNNModel(nn.Module): # 定義class CNNModel，並繼承torch.nn.Module
         conv_output_size = input_shape[1] // 2 // 2 // 2  # 在三次池化後的影像尺寸，因為做了三次2*2的MaxPooling
         self.fc_layers = nn.Sequential( # 定義全連接層
             nn.Flatten(), # 把所有特徵圖，降成一維張量
-            nn.Linear(conv_output_size * conv_output_size * 256, 512), # 接一層神經元，輸入通道數=128張特徵圖的總像素量，輸出64個通道
-            nn.LeakyReLU(0.01), # 接讓負值變0的神經元，輸出與輸入輸量相同
-            nn.Linear(512, 128),
-            nn.LeakyReLU(0.01),
-            nn.Linear(128, 64),
-            nn.LeakyReLU(0.01),
+            nn.Linear(conv_output_size * conv_output_size * 128, 64), # 接一層神經元，輸入通道數=128張特徵圖的總像素量，輸出64個通道
+            nn.ReLU(), # 接讓負值變0的神經元，輸出與輸入輸量相同
             nn.Linear(64, num_classes), # 這是輸出層，將上一層輸出的64個輸出值，各類別可能性大小
-            nn.Softmax(dim=1)
+            # nn.Softmax(dim=1)
         )
 
     def forward(self, x):
@@ -203,7 +199,7 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters())
 
 # 訓練模型並繪製曲線
-num_epochs = 20
+num_epochs = 6
 model = train_model(model, train_loader, val_loader, criterion, optimizer, num_epochs)
 
 # 保存訓練好的模型
