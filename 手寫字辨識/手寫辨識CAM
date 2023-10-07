@@ -1,0 +1,85 @@
+import numpy as np
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
+import pandas as pd
+import cv2
+import matplotlib.pyplot as plt
+
+# Model / data parameters
+num_classes = 10
+input_shape = (28, 28, 1)
+
+# Load the data and split it between train and test sets
+(x_train, y_train), (x_test, y_test) = keras.datasets.mnist.load_data()
+# Scale images to the [0, 1] range
+x_train = x_train.astype("float32") / 255
+x_test = x_test.astype("float32") / 255
+# Make sure images have shape (28, 28, 1)
+x_train = np.expand_dims(x_train, -1)
+x_test = np.expand_dims(x_test, -1)
+# convert class vectors to binary class matrices
+
+y_TrainOneHot = keras.utils.to_categorical(y_train)
+y_TestOneHot = keras.utils.to_categorical(y_test)
+
+#build model
+model = keras.Sequential(
+    [
+        keras.Input(shape=input_shape),
+        layers.Conv2D(32, kernel_size=(3, 3), activation="relu"),
+        layers.MaxPooling2D(pool_size=(2, 2)),
+        layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
+        #layers.MaxPooling2D(pool_size=(2, 2)),
+        layers.GlobalAveragePooling2D(),
+        layers.Dense(num_classes, activation="softmax"),
+    ]
+)
+modelnamecov=model.layers[2].name
+modelnamemds=model.layers[4].name
+
+#training
+batch_size = 128
+epochs = 10
+
+model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
+model.fit(x_train, y_TrainOneHot, batch_size=batch_size, epochs=epochs, validation_split=0.1)
+
+score = model.evaluate(x_test, y_TestOneHot, verbose=0)
+print("Test loss:", score[0])
+print("Test accuracy:", score[1])
+predictions = np.argmax(model.predict(x_test), axis=-1)
+pd.crosstab(y_test,predictions,
+ rownames=['label'],colnames=['predict'])
+
+# CAM test data
+t = x_test[9];
+x_input2 = np.reshape(t,(1,28,28,1))
+model_output1 = model.get_layer(modelnamemds).output
+m1 = keras.Model(inputs=model.input,outputs=model_output1)
+output_dense = m1.predict(x_input2)[0,:]
+inference_number = pd.Series(output_dense).idxmax()
+
+# CAM and display
+wb_dense = np.array(model.layers[4].get_weights())
+model_output2 = model.get_layer(modelnamecov).output
+m = keras.Model(inputs=model.input,outputs=model_output2)
+
+#print(x_input2.shape)
+output_conv2d_2 = m.predict(x_input2)
+output_conv2d_2_np = np.reshape(output_conv2d_2,(11,11,64))
+heat_map = np.zeros((28,28))
+for i in range(0,64):
+ tmp1 = output_conv2d_2_np[:,:,i]
+ tmp2 = np.reshape(tmp1,(11,11))
+ tmp3 = cv2.resize(tmp2, (28,28), interpolation=cv2.INTER_AREA)
+ tmp4 = wb_dense[0][i,inference_number] * tmp3
+ heat_map[:,:] = heat_map[:,:] + tmp4[:,:]
+ax=plt.subplot(1,2,1)
+heat_map = np.maximum(heat_map,0)
+ax.imshow(heat_map, cmap='jet')
+x_tmp = np.reshape(t,(28,28))
+ax=plt.subplot(1,2,2)
+ax.imshow(x_tmp, cmap='gray')
+ax.set_xticks([]);ax.set_yticks([])
+plt.show()
