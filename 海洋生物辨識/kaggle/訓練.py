@@ -13,9 +13,9 @@ import seaborn as sns
 '''
 訓練資料的資料夾結構(各資料夾名稱可自訂):
 data_folder
-    cat
+    Crabs
         *.jpg
-    dog
+    Dolphins
         *.jpg
     ...
 '''
@@ -28,26 +28,34 @@ class CustomDataset(Dataset): # 繼承Dataset
         #self.categories = ["Clams", "Corals", "Crabs", "Dolphin", "Eel", "Fish", "Jelly Fish", "Lobster", "Nudibranchs", "Octopus"]#, "Otter", "Penguin", "Puffers", "Sea Rays", "Sea Urchins", "Seahorse", "Seal", "Sharks", "Shrimp", "Squid", "Starfish", "Turtle_Tortoise", "Whale"] # 訓練資料放置的資料夾名稱
         self.data, self.labels = self.load_data() # 把所有訓練圖片放入data,label放入labels
 
-    def load_data(self):
-        data = []
-        labels = []
-        for category in self.categories: # 跑遍所有類
-            path = os.path.join(self.data_dir, category) # 把路徑加起來，得到各類資料夾的路徑
-            label = self.categories.index(category) # 找出category在self.categories中的索引，ex:貓是0,狗是1
-            for img_name in os.listdir(path): # 跑遍所有圖片
-                img_path = os.path.join(path, img_name) # 獲取圖片的路徑
-                print("Loading:", img_path)  # 為了除錯而印出圖像路徑
-                img = cv2.imread(img_path) # 讀取圖片
-                if img is None:
-                    print("Error loading:", img_path)
-                    continue  # 如果讀取失敗，則跳過該圖像
-                img = cv2.resize(img, (self.img_size, self.img_size)) #將所有圖片都縮放成相同大小
-                data.append(img) # 把圖片放進去
-                labels.append(label) # 把label放進去
+    def load_data(data_dir):
+        images = []
+        masks = []
+        for folder in os.listdir(data_dir):
+            folder_path = os.path.join(data_dir, folder)
+            for item in os.listdir(folder_path):
+                if "mask" in item:
+                    continue
+                img_path = os.path.join(folder_path, item)
+                mask_name = item.split('.')[0] + '_mask.png'
+                mask_path = os.path.join(folder_path, mask_name)
+                if not os.path.exists(mask_path):
+                    print(f"Mask not found for image {img_path}")
+                    continue
+                
+                # Try to load the image and mask
+                try:
+                    image = Image.open(img_path)
+                    mask = Image.open(mask_path)
+                except Exception as e:
+                    print("Detailed error while loading:", str(e))
+                    continue
+                    
+                images.append(img_path)
+                masks.append(mask_path)
+                
+        return images, masks
 
-        data = np.array(data)
-        labels = np.array(labels)
-        return data, labels
 
     def __len__(self): # 獲取資料量
         return len(self.data)
@@ -195,9 +203,9 @@ def train_model(model, train_loader, test_loader, criterion, optimizer, num_epoc
     return model
 
 # 設置數據目錄和影像大小
-data_dir = "dataset\\"  # 替換成包含"cat"和"dog"文件夾的數據集目錄
+#data_dir = "dataset\\"  # 替換成包含"cat"和"dog"文件夾的數據集目錄
 img_size = 224   # 替換成您想要的影像大小，例如128x128
-num_classes = 6  # 貓和狗兩個類別
+num_classes = 6  # 海洋生物類別
 
 
 # 載入數據集並預處理

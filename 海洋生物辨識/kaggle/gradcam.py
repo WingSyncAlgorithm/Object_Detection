@@ -342,10 +342,10 @@ def main():
     # #target_layers可以传入多个层结构，获取哪一个网络层结构的输出
     # target_layers = [model.features[-1]]
 #使用vgg16网络
-    img_size = 128  # 與訓練時相同的圖片尺寸
-    num_classes = 6ˊ  # 貓和狗兩個類別
+    img_size = 224  # 與訓練時相同的圖片尺寸
+    num_classes = 6  # 貓和狗兩個類別
     model = CNNModel(input_shape=(3, img_size, img_size), num_classes=num_classes) # 定義CNNModel的物件，輸入通道數rgb為3、圖片大小、類別數
-    model_path = "model_k5~cg32ch64ch128ch64ch16_dropout_xavier_deppconnectedch128ch64_SGD_reduce_3xtrain_ringoctopus.pth" # 設置權重文件的路徑，內包含訓練好的權重
+    model_path = "model_kaggle_6class_processed_epoch50_batchnorm.pth" # 設置權重文件的路徑，內包含訓練好的權重
     model.load_state_dict(torch.load(model_path)) # torch.load()將文件轉成字典，再用load_state_dict()將字典中的權重載入model
     target_layers = [model.conv_layers] # 設置要計算gradcam的層，model.conv_layers[3]指nn.Conv2d(32, 64, kernel_size=3, padding=1)
     #print(target_layers)
@@ -355,7 +355,7 @@ def main():
     #print([model.features])
     
     # load image，读取的图片
-    img_path = "test5.jpg" # 設置圖片路徑
+    img_path = "test6.jpg" # 設置圖片路徑
     
     test_image = cv2.imread(img_path) # cv2.imread()返回一個包含圖像rgb像素值的 NumPy 三維陣列
     test_image = cv2.resize(test_image, (img_size, img_size)) # 調整圖片大小至(img_size, img_size)
