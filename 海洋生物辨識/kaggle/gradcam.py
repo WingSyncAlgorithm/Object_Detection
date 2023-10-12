@@ -335,41 +335,56 @@ def center_crop_img(img: np.ndarray, size: int):
     return img  # 返回裁剪後的圖像
 
 
+def apply_gradcam_to_directory(directory_path, model, target_layers, img_size=224):
+    cam = GradCAM(model=model, target_layers=target_layers, use_cuda=False)
+    
+    # Class names for prediction
+    class_names = ["Crabs", "Dolphin", "blue_ringed_octopus", "Sea Urchins", "Seahorse", "Turtle_Tortoise", "Jelly Fish", "Lobster", "Nudibranchs", "Seal"]
+
+    # Check if directory exists
+    if not os.path.exists(directory_path):
+        print("Directory does not exist!")
+        return
+    
+    # Loop through each image in the directory
+    for img_name in os.listdir(directory_path):
+        img_path = os.path.join(directory_path, img_name)
+        
+        if not os.path.isfile(img_path) or not img_name.lower().endswith(('.png', '.jpg', '.jpeg')):
+            continue
+        
+        # Skip images with filenames containing "_cam_"
+        if "_cam_" in img_name:
+            continue
+        
+        test_image = cv2.imread(img_path)
+        test_image = cv2.resize(test_image, (img_size, img_size))
+        test_image = cv2.cvtColor(test_image, cv2.COLOR_BGR2RGB)
+        input_tensor = transforms.ToTensor()(test_image).unsqueeze(0)
+        
+        output = model(input_tensor)
+        predicted_class = class_names[torch.argmax(output).item()]
+        
+        target_category = None
+        grayscale_cam = cam(input_tensor=input_tensor, target_category=target_category)
+        grayscale_cam = grayscale_cam[0, :]
+        visualization = show_cam_on_image(test_image / 255., grayscale_cam, use_rgb=True)
+        
+        # Save or display the visualization
+        output_filename = os.path.splitext(img_name)[0] + "_cam_" + predicted_class + os.path.splitext(img_name)[1]
+        output_path = os.path.join(directory_path, output_filename)
+        cv2.imwrite(output_path, cv2.cvtColor(visualization, cv2.COLOR_RGB2BGR))
+        print(f"Saved GradCAM result for {img_name} to {output_path}")
+
 def main():
-    # #如果使用自己的模型,需要导入自己的模型+预训练权重
-    # #pretrained=True会自动的下载torchvision官方预训练好的权重
-    # model = models.mobilenet_v3_large(pretrained=True)
-    # #target_layers可以传入多个层结构，获取哪一个网络层结构的输出
-    # target_layers = [model.features[-1]]
-#使用vgg16网络
-    img_size = 224  # 與訓練時相同的圖片尺寸
-    num_classes = 6  # 貓和狗兩個類別
-    model = CNNModel(input_shape=(3, img_size, img_size), num_classes=num_classes) # 定義CNNModel的物件，輸入通道數rgb為3、圖片大小、類別數
-    model_path = "model_kaggle_6class_processed_epoch50_batchnorm.pth" # 設置權重文件的路徑，內包含訓練好的權重
-    model.load_state_dict(torch.load(model_path)) # torch.load()將文件轉成字典，再用load_state_dict()將字典中的權重載入model
-    target_layers = [model.conv_layers] # 設置要計算gradcam的層，model.conv_layers[3]指nn.Conv2d(32, 64, kernel_size=3, padding=1)
-    #print(target_layers)
+    directory_path = "test"  # Set to your images directory path
+    img_size = 224
+    num_classes = 6
+    model = CNNModel(input_shape=(3, img_size, img_size), num_classes=num_classes)
+    model_path = "model_kaggle_6class_processed_epoch50_batchnorm.pth"
+    model.load_state_dict(torch.load(model_path))
+    target_layers = [model.conv_layers]
     
-   # model = models.vgg16(pretrained=True)
-    #target_layers = [model.features]
-    #print([model.features])
+    apply_gradcam_to_directory(directory_path, model, target_layers)
     
-    # load image，读取的图片
-    img_path = "test6.jpg" # 設置圖片路徑
-    
-    test_image = cv2.imread(img_path) # cv2.imread()返回一個包含圖像rgb像素值的 NumPy 三維陣列
-    test_image = cv2.resize(test_image, (img_size, img_size)) # 調整圖片大小至(img_size, img_size)
-    test_image = cv2.cvtColor(test_image, cv2.COLOR_BGR2RGB) # OpenCV 在預設情況下讀取的圖像格式是 BGR，所以需要將其轉換為 RGB 格式
-    input_tensor = transforms.ToTensor()(test_image).unsqueeze(0) 
-    # transforms.ToTensor(): 這是一個 PyTorch 的轉換函式，它將圖像轉換成張量格式。它會將像素值範圍從 [0, 255] 轉換到 [0, 1]
-    # .unsqueeze(0): 在張量的最前面（即第 0 維）添加一個維度。這是因為模型接受的輸入是一個批次（batch）的資料，所以需要在前面添加一個批次的維度。
-
-    cam = GradCAM(model=model, target_layers=target_layers, use_cuda=False) #定義GradCAM的物件，輸入 : 模型、目標層、是否使用gpu
-    target_category = None  # 要計算哪個類別的gradcam，若是None，則計算機率最大的類別
-
-    grayscale_cam = cam(input_tensor=input_tensor, target_category=target_category) # 執行GradCAM中的__call__，獲取gradcam
-    grayscale_cam = grayscale_cam[0, :] # 我們不需要一維資料，並取出gradcam
-    visualization = show_cam_on_image(test_image / 255., grayscale_cam, use_rgb=True) # 丟進show_cam_on_image(測試圖片每個像素質都除以255,gradcam圖,圖片是否是rgb)
-    plt.imshow(visualization) # 顯示圖片
-    plt.show()
 main()
