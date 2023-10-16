@@ -11,6 +11,8 @@ from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
 import seaborn as sns
 from PIL import Image
+import torchvision.models as models
+from torch.optim import Adam
 
 # Dataset
 class UAVDataset(Dataset):
@@ -46,6 +48,35 @@ class UAVDataset(Dataset):
         return image, label
 
 # Model Architecture
+
+class SegNet(nn.Module):
+    def __init__(self, input_channels, output_channels):
+        super(SegNet, self).__init__()
+        self.encoder = models.vgg16_bn(pretrained=True).features
+        self.decoder = nn.Sequential(
+            nn.ConvTranspose2d(512, 512, kernel_size=3, stride=2, padding=1, output_padding=1),
+            nn.BatchNorm2d(512),
+            nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(512, 512, kernel_size=3, stride=2, padding=1, output_padding=1),
+            nn.BatchNorm2d(512),
+            nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(512, 256, kernel_size=3, stride=2, padding=1, output_padding=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(256, 128, kernel_size=3, stride=2, padding=1, output_padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(128, 64, kernel_size=3, stride=2, padding=1, output_padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(64, output_channels, kernel_size=3, stride=2, padding=1, output_padding=1),
+        )
+
+    def forward(self, x):
+        x = self.encoder(x)
+        x = self.decoder(x)
+        return x
+
 class Encoder(nn.Module):
     def __init__(self):
         super(Encoder, self).__init__()
@@ -107,6 +138,7 @@ def train_model(model, train_loader, test_loader, criterion, optimizer, num_epoc
         train_loss = 0.0
         train_accuracy = 0.0
         for inputs, labels in train_loader:
+            print(inputs.size())
             optimizer.zero_grad()
             outputs = model(inputs)
             loss = criterion(outputs, inputs)
@@ -165,6 +197,8 @@ def train_model(model, train_loader, test_loader, criterion, optimizer, num_epoc
 
 
 # Main
+num_classes = 8
+
 transform = transforms.Compose([transforms.Resize((256, 256)), transforms.ToTensor()])
 
 train_dataset = UAVDataset("uavid_v1.5_official_release_image\\uavid_train", transform=transform)
@@ -173,9 +207,14 @@ test_dataset = UAVDataset("uavid_v1.5_official_release_image\\uavid_val", transf
 train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=32, shuffle=True)
 
-model = AutoEncoderModel()
-criterion = nn.MSELoss()
-optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+#model = AutoEncoderModel()
+model = SegNet(input_channels=3, output_channels=num_classes)  # Assume num_classes is the number of classes for segmentation
+
+#criterion = nn.MSELoss()
+criterion = nn.CrossEntropyLoss()
+
+#optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+optimizer = Adam(model.parameters(), lr=0.001)
 
 model = train_model(model, train_loader, test_loader, criterion, optimizer, num_epochs=50)
 
