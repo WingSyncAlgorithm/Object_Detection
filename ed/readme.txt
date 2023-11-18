@@ -1,2 +1,8 @@
 最佳解:
 ed_cat_deep.py+model.py中SegNet2
+ed_cat_test.py用來分割測試圖片，請到model.txt中的雲端連結下載已訓練好的參數，並在ed_cat_test.py中設定相對應的網路結構
+
+ed_cat表示用離散的類別訓練，每個類別都對應到特定的顏色
+ed表示用連續的rgb數值，做imagetoimage的影像分割
+model.py裡有不同的網路結構的class
+ed_cat_videos_test.py用來分割測試影片，請到model.txt中的雲端連結下載已訓練好的參數，並在ed_cat_test.py中設定相對應的網路結構
