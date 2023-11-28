@@ -52,7 +52,7 @@ class CustomDataset2(Dataset):
         self.data_dir = data_dir
         self.img_size = img_size
         self.num_classes = num_classes
-        self.categories = ["face"]
+        self.categories = ["Crabs"]
         self.data, self.labels = self.load_data()
 
     def load_data(self):
