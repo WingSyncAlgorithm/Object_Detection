@@ -13,7 +13,7 @@ import torchvision.utils as vutils
 
 class Config:
     # 將所有配置放在一個類別中，方便管理
-    dataroot = "dataset\\data_Crabs"
+    dataroot = "dataset\\data"
     batch_size = 1
     image_size = 128
     nz = 1000
@@ -52,7 +52,7 @@ class CustomDataset2(Dataset):
         self.data_dir = data_dir
         self.img_size = img_size
         self.num_classes = num_classes
-        self.categories = ["Crabs"]
+        self.categories = ["face"]
         self.data, self.labels = self.load_data()
 
     def load_data(self):
@@ -242,7 +242,7 @@ def train(config, dataloader, generator, discriminator):
     for epoch in range(config.num_epochs):
         for i, data in enumerate(dataloader, 0):
             # (1) 更新判別器網絡: maximize log(D(x)) + log(1 - D(G(z)))
-            discriminator.zero_grad()
+            optimizerD.zero_grad()
             # 訓練全部真實的批次資料
             real_images = data[0].to(device)
             batch_size = real_images.size(0)
@@ -265,7 +265,7 @@ def train(config, dataloader, generator, discriminator):
             optimizerD.step()
 
             # (2) 更新生成器網絡: maximize log(D(G(z)))
-            generator.zero_grad()
+            optimizerG.zero_grad()
             label.fill_(real_label)  # 生成器的假標籤是真的
             output = discriminator(fake_images).view(-1)
             loss_g = criterion(output, label)
