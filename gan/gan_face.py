@@ -10,7 +10,7 @@ import PIL.Image as Image
 import torchvision.utils as vutils
 import cv2
 # Root directory for dataset
-dataroot = "dataset\\data"
+dataroot = "dataset\\data_Crabs"
 
 # Number of workers for dataloader
 workers = 1
@@ -71,7 +71,7 @@ class CustomDataset2(Dataset):
         self.data_dir = data_dir
         self.img_size = img_size
         self.num_classes = num_classes
-        self.categories = ["face"]
+        self.categories = ["Crabs"]
         self.data, self.labels = self.load_data()
 
     def load_data(self):

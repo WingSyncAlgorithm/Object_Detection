@@ -13,14 +13,11 @@ import torchvision.utils as vutils
 
 class Config:
     # 將所有配置放在一個類別中，方便管理
-    dataroot = "dataset\\data"
-    batch_size = 32
+    dataroot = "dataset\\data_Crabs"
+    batch_size = 1
     image_size = 128
-    nc = 3
-    nz = 100
-    ngf = 64
-    ndf = 64
-    num_epochs = 30
+    nz = 1000
+    num_epochs = 100
     lr = 0.0002
     beta1 = 0.5
     ngpu = 1
@@ -55,7 +52,7 @@ class CustomDataset2(Dataset):
         self.data_dir = data_dir
         self.img_size = img_size
         self.num_classes = num_classes
-        self.categories = ["face"]
+        self.categories = ["Crabs"]
         self.data, self.labels = self.load_data()
 
     def load_data(self):
@@ -72,8 +69,8 @@ class CustomDataset2(Dataset):
                     print("Error loading:", img_path)
                     continue
                 img = cv2.resize(img, (self.img_size, self.img_size))
-                data.append(img)  # 把圖片放進去
-                labels.append(label)  # 把label放進去
+                data.append(img)
+                labels.append(label)
 
         data = np.array(data)
         labels = np.array(labels)
@@ -113,28 +110,25 @@ class Generator(nn.Module):
         config = Config()
         self.main = nn.Sequential(
             # input is Z, going into a convolution
-            nn.ConvTranspose2d(config.nz, config.ngf * 8, 4, 1, 0, bias=False),
-            nn.BatchNorm2d(config.ngf * 8),
+            nn.ConvTranspose2d(config.nz, 512, 4, 1, 0, bias=False),
+            nn.BatchNorm2d(512),
             nn.ReLU(True),
-            # state size. (config.ngf*8) x 4 x 4
-            nn.ConvTranspose2d(config.ngf * 8, config.ngf * \
-                               4, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(config.ngf * 4),
+            # state size. 512 x 4 x 4
+            nn.ConvTranspose2d(512, 256, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(256),
             nn.ReLU(True),
-            # state size. (config.ngf*4) x 8 x 8
-            nn.ConvTranspose2d(config.ngf * 4, config.ngf * \
-                               2, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(config.ngf * 2),
+            # state size. 256 x 8 x 8
+            nn.ConvTranspose2d(256, 128, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(128),
             nn.ReLU(True),
-            # state size. (config.ngf*2) x 16 x 16
-            nn.ConvTranspose2d(config.ngf * 2, config.ngf,
-                               4, 2, 1, bias=False),
-            nn.BatchNorm2d(config.ngf),
+            # state size. 128 x 16 x 16
+            nn.ConvTranspose2d(128, 64, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(64),
             nn.ReLU(True),
-            # state size. (config.ngf) x 32 x 32
-            nn.ConvTranspose2d(config.ngf, config.nc, 4, 2, 1, bias=False),
+            # state size. 64 x 32 x 32
+            nn.ConvTranspose2d(64, 3, 4, 4, 0, bias=False),
             nn.Tanh()
-            # state size. (config.nc) x 64 x 64
+            # state size. 3 x 128 x 128
         )
 
     def forward(self, input):
@@ -142,33 +136,41 @@ class Generator(nn.Module):
 
 
 class Discriminator(nn.Module):
-    def __init__(self, ngpu):
+    def __init__(self, ngpu,
+                 input_shape=(3, 128, 128), num_classes=1):
         super(Discriminator, self).__init__()
         self.ngpu = ngpu
-        config = Config()
-        self.main = nn.Sequential(
-            # input is (config.nc) x 64 x 64
-            nn.Conv2d(config.nc, config.ndf, 4, 2, 1, bias=False),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. (config.ndf) x 32 x 32
-            nn.Conv2d(config.ndf, config.ndf * 2, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(config.ndf * 2),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. (config.ndf*2) x 16 x 16
-            nn.Conv2d(config.ndf * 2, config.ndf * 4, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(config.ndf * 4),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. (config.ndf*4) x 8 x 8
-            nn.Conv2d(config.ndf * 4, config.ndf * 8, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(config.ndf * 8),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. (config.ndf*8) x 4 x 4
-            nn.Conv2d(config.ndf * 8, 1, 4, 1, 0, bias=False),
-            nn.Sigmoid()
+        self.conv_layers = nn.Sequential(
+            nn.Conv2d(3, 32, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+
+            nn.Conv2d(32, 64, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+
+            nn.Conv2d(64, 128, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2)
         )
 
-    def forward(self, input):
-        return self.main(input)
+        # 計算全連接層的輸入尺寸
+        conv_output_size = input_shape[1] // 2 // 2 // 2  # 在三次池化後的影像尺寸
+        self.fc_layers = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(conv_output_size * conv_output_size * 128, 64),
+            nn.ReLU(),
+            nn.Linear(64, num_classes),
+            nn.Sigmoid()
+            # nn.Softmax(dim=1)
+        )
+
+    def forward(self, x):
+        x = self.conv_layers(x)
+        x = self.fc_layers(x)
+        x = x.unsqueeze(-1).unsqueeze(-1)
+        # print(x.size())
+        return x
 
 
 def weights_init(m):
@@ -196,7 +198,8 @@ def show_images(images, epoch):
     plt.show()
 
 
-def train(config, dataloader, generator, discriminator, device):
+def train(config, dataloader, generator, discriminator):
+    device = config.device
     fixed_noise = torch.randn(16, config.nz, 1, 1, device=device)
     # 初始化 BCELoss 函數
     criterion = nn.BCELoss()
@@ -252,12 +255,10 @@ def train(config, dataloader, generator, discriminator, device):
             D_G_z2 = output.mean().item()
             optimizerG.step()
 
-            # 打印訓練狀態
             if i % 50 == 0:
                 print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
                       % (epoch, config.num_epochs, i, len(dataloader), errD.item(), errG.item(), D_x, D_G_z1, D_G_z2))
 
-            # 紀錄損失用於後續繪圖
             G_losses.append(errG.item())
             D_losses.append(errD.item())
 
@@ -265,12 +266,12 @@ def train(config, dataloader, generator, discriminator, device):
             if (iters % 500 == 0) or ((epoch == config.num_epochs-1) and (i == len(dataloader)-1)):
                 with torch.no_grad():
                     fake = generator(fixed_noise).detach().cpu()
+                    show_images(fake[:16], epoch)
                 img_list.append(vutils.make_grid(
                     fake, padding=2, normalize=True))
 
             iters += 1
 
-    # 返回訓練完成後的模型和統計資料
     return generator, discriminator, G_losses, D_losses, img_list
 
 
