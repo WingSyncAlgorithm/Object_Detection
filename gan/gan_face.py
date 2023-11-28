@@ -101,14 +101,14 @@ class CustomDataset2(Dataset):
     def __getitem__(self, index):
         """
         Args:
-            index (int): 樣本的索引。
-            
-        Returns: 返回樣本的圖片和標籤。
+            index (int): 樣本的索引
+
+        Returns: 返回樣本的圖片和標籤
         """
-        img = self.data[index]  # 取得圖片資料
-        label = self.labels[index]  # 取得標籤資料
+        img = self.data[index]
+        label = self.labels[index]
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        img = transforms.ToTensor()(img)  # 將圖片轉換成PyTorch的Tensor格式
+        img = transforms.ToTensor()(img)
         label = torch.tensor(label, dtype=torch.long)  # 將標籤資料轉換為Long型態
         return img, label
 
