@@ -1,0 +1,294 @@
+import os
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import DataLoader, Dataset
+from torchvision import transforms
+import numpy as np
+import matplotlib.pyplot as plt
+import PIL.Image as Image
+import cv2
+import torchvision.utils as vutils
+
+
+class Config:
+    # 將所有配置放在一個類別中，方便管理
+    dataroot = "dataset\\data"
+    batch_size = 32
+    image_size = 128
+    nc = 3
+    nz = 100
+    ngf = 64
+    ndf = 64
+    num_epochs = 30
+    lr = 0.0002
+    beta1 = 0.5
+    ngpu = 1
+    num_classes = 1
+    device = torch.device("cuda:0" if (
+        torch.cuda.is_available() and ngpu > 0) else "cpu")
+
+# 這裡保留您原本的 CustomDataset 和 CustomDataset2 類別
+
+
+class CustomDataset(Dataset):
+    def __init__(self, root_dir, transform=None):
+        self.root_dir = root_dir
+        self.transform = transform
+        self.images = os.listdir(self.root_dir)
+
+    def __len__(self):
+        return len(self.images)
+
+    def __getitem__(self, idx):
+        img_path = os.path.join(self.root_dir, self.images[idx])
+        image = Image.open(img_path).convert('RGB')
+
+        if self.transform:
+            image = self.transform(image)
+
+        return image
+
+
+class CustomDataset2(Dataset):
+    def __init__(self, data_dir, img_size, num_classes):
+        self.data_dir = data_dir
+        self.img_size = img_size
+        self.num_classes = num_classes
+        self.categories = ["face"]
+        self.data, self.labels = self.load_data()
+
+    def load_data(self):
+        data = []
+        labels = []
+        for category in self.categories:
+            category_path = os.path.join(self.data_dir, category)
+            # 找出category在self.categories中的索引，ex:貓是0,狗是1,......
+            label = self.categories.index(category)
+            for img_name in os.listdir(category_path):
+                img_path = os.path.join(category_path, img_name)
+                img = cv2.imread(img_path)
+                if img is None:  # 檢查是否為非圖片文件，是則跳過
+                    print("Error loading:", img_path)
+                    continue
+                img = cv2.resize(img, (self.img_size, self.img_size))
+                data.append(img)  # 把圖片放進去
+                labels.append(label)  # 把label放進去
+
+        data = np.array(data)
+        labels = np.array(labels)
+        return data, labels
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, index):
+        """
+        Args:
+            index (int): 樣本的索引
+
+        Returns: 返回樣本的圖片和標籤
+        """
+        img = self.data[index]
+        label = self.labels[index]
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img = transforms.ToTensor()(img)
+        label = torch.tensor(label, dtype=torch.long)  # 將標籤資料轉換為Long型態
+        return img, label
+
+
+def create_dataset(dataset_type, dataroot, image_size, num_classes):
+    # 通過工廠方法創建數據集
+    if dataset_type == 'custom':
+        return CustomDataset2(dataroot, image_size, num_classes)
+    # 可以在此添加其他數據集類型的創建邏輯
+    else:
+        raise ValueError("Unknown dataset type")
+
+
+class Generator(nn.Module):
+    def __init__(self, ngpu):
+        super(Generator, self).__init__()
+        self.ngpu = ngpu
+        config = Config()
+        self.main = nn.Sequential(
+            # input is Z, going into a convolution
+            nn.ConvTranspose2d(config.nz, config.ngf * 8, 4, 1, 0, bias=False),
+            nn.BatchNorm2d(config.ngf * 8),
+            nn.ReLU(True),
+            # state size. (config.ngf*8) x 4 x 4
+            nn.ConvTranspose2d(config.ngf * 8, config.ngf * \
+                               4, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(config.ngf * 4),
+            nn.ReLU(True),
+            # state size. (config.ngf*4) x 8 x 8
+            nn.ConvTranspose2d(config.ngf * 4, config.ngf * \
+                               2, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(config.ngf * 2),
+            nn.ReLU(True),
+            # state size. (config.ngf*2) x 16 x 16
+            nn.ConvTranspose2d(config.ngf * 2, config.ngf,
+                               4, 2, 1, bias=False),
+            nn.BatchNorm2d(config.ngf),
+            nn.ReLU(True),
+            # state size. (config.ngf) x 32 x 32
+            nn.ConvTranspose2d(config.ngf, config.nc, 4, 2, 1, bias=False),
+            nn.Tanh()
+            # state size. (config.nc) x 64 x 64
+        )
+
+    def forward(self, input):
+        return self.main(input)
+
+
+class Discriminator(nn.Module):
+    def __init__(self, ngpu):
+        super(Discriminator, self).__init__()
+        self.ngpu = ngpu
+        config = Config()
+        self.main = nn.Sequential(
+            # input is (config.nc) x 64 x 64
+            nn.Conv2d(config.nc, config.ndf, 4, 2, 1, bias=False),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. (config.ndf) x 32 x 32
+            nn.Conv2d(config.ndf, config.ndf * 2, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(config.ndf * 2),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. (config.ndf*2) x 16 x 16
+            nn.Conv2d(config.ndf * 2, config.ndf * 4, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(config.ndf * 4),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. (config.ndf*4) x 8 x 8
+            nn.Conv2d(config.ndf * 4, config.ndf * 8, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(config.ndf * 8),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. (config.ndf*8) x 4 x 4
+            nn.Conv2d(config.ndf * 8, 1, 4, 1, 0, bias=False),
+            nn.Sigmoid()
+        )
+
+    def forward(self, input):
+        return self.main(input)
+
+
+def weights_init(m):
+    classname = m.__class__.__name__
+    if classname.find('Conv') != -1:
+        nn.init.normal_(m.weight.data, 0.0, 0.02)
+    elif classname.find('BatchNorm') != -1:
+        nn.init.normal_(m.weight.data, 1.0, 0.02)
+        nn.init.constant_(m.bias.data, 0)
+
+
+def show_images(images, epoch):
+    sqrtn = int(np.ceil(np.sqrt(images.shape[0])))
+    print(sqrtn)
+    plt.figure(figsize=(10, 10))  # 可以根据需要调整大小
+    for index, image in enumerate(images):
+        plt.subplot(sqrtn, sqrtn, index + 1)
+        # 转换图像格式从[channels, height, width]到[height, width, channels]
+        image = np.transpose(image, (1, 2, 0))
+        # 由于图像数据可能被归一化，需要调整到[0, 1]范围以正确显示
+        image = (image - image.min()) / (image.max() - image.min())
+        plt.imshow(image)
+        plt.axis('off')  # 关闭坐标轴
+    plt.savefig("Generator_epoch_{}.png".format(epoch))
+    plt.show()
+
+
+def train(config, dataloader, generator, discriminator, device):
+    fixed_noise = torch.randn(16, config.nz, 1, 1, device=device)
+    # 初始化 BCELoss 函數
+    criterion = nn.BCELoss()
+
+    # 建立真實和假的標籤變量
+    real_label = 1.
+    fake_label = 0.
+
+    # 設定 Adam 優化器
+    optimizerD = optim.Adam(discriminator.parameters(),
+                            lr=config.lr, betas=(config.beta1, 0.999))
+    optimizerG = optim.Adam(generator.parameters(),
+                            lr=config.lr, betas=(config.beta1, 0.999))
+
+    # 訓練過程中的追踪指標
+    img_list = []
+    G_losses = []
+    D_losses = []
+    iters = 0
+
+    print("開始訓練...")
+    for epoch in range(config.num_epochs):
+        for i, data in enumerate(dataloader, 0):
+            # (1) 更新判別器網絡: maximize log(D(x)) + log(1 - D(G(z)))
+            discriminator.zero_grad()
+            # 訓練全部真實批次的資料
+            real_cpu = data[0].to(device)
+            b_size = real_cpu.size(0)
+            label = torch.full((b_size,), real_label,
+                               dtype=torch.float, device=device)
+            output = discriminator(real_cpu).view(-1)
+            errD_real = criterion(output, label)
+            errD_real.backward()
+            D_x = output.mean().item()
+
+            # 訓練全部假的批次資料
+            noise = torch.randn(b_size, config.nz, 1, 1, device=device)
+            fake = generator(noise)
+            label.fill_(fake_label)
+            output = discriminator(fake.detach()).view(-1)
+            errD_fake = criterion(output, label)
+            errD_fake.backward()
+            D_G_z1 = output.mean().item()
+            errD = errD_real + errD_fake
+            optimizerD.step()
+
+            # (2) 更新生成器網絡: maximize log(D(G(z)))
+            generator.zero_grad()
+            label.fill_(real_label)  # 生成器的假標籤是真的
+            output = discriminator(fake).view(-1)
+            errG = criterion(output, label)
+            errG.backward()
+            D_G_z2 = output.mean().item()
+            optimizerG.step()
+
+            # 打印訓練狀態
+            if i % 50 == 0:
+                print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
+                      % (epoch, config.num_epochs, i, len(dataloader), errD.item(), errG.item(), D_x, D_G_z1, D_G_z2))
+
+            # 紀錄損失用於後續繪圖
+            G_losses.append(errG.item())
+            D_losses.append(errD.item())
+
+            # 檢查生成器的進度
+            if (iters % 500 == 0) or ((epoch == config.num_epochs-1) and (i == len(dataloader)-1)):
+                with torch.no_grad():
+                    fake = generator(fixed_noise).detach().cpu()
+                img_list.append(vutils.make_grid(
+                    fake, padding=2, normalize=True))
+
+            iters += 1
+
+    # 返回訓練完成後的模型和統計資料
+    return generator, discriminator, G_losses, D_losses, img_list
+
+
+def main():
+    config = Config()
+    dataset = create_dataset('custom', config.dataroot,
+                             config.image_size, config.num_classes)
+    dataloader = DataLoader(
+        dataset, batch_size=config.batch_size, shuffle=True)
+
+    generator = Generator(config.ngpu).to(config.device)
+    discriminator = Discriminator(config.ngpu).to(config.device)
+
+    generator.apply(weights_init)
+    discriminator.apply(weights_init)
+
+    train(config, dataloader, generator, discriminator)
+
+
+if __name__ == "__main__":
+    main()
