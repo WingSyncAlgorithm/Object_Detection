@@ -242,7 +242,7 @@ def train(config, dataloader, generator, discriminator):
             output = discriminator(fake_images.detach()).view(-1)
             loss_d_fake = criterion(output, label)
             loss_d_fake.backward()
-            D_G_z1 = output.mean().item()
+            d_g_z1 = output.mean().item()
             loss_d_total = loss_d_real + loss_d_fake
             optimizerD.step()
 
@@ -252,15 +252,15 @@ def train(config, dataloader, generator, discriminator):
             output = discriminator(fake_images).view(-1)
             loss_g = criterion(output, label)
             loss_g.backward()
-            d_g_z = output.mean().item()
+            d_g_z2 = output.mean().item()
             optimizerG.step()
 
             if i % 50 == 0:
                 print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
-                      % (epoch, config.num_epochs, i, len(dataloader), errD.item(), errG.item(), D_x, D_G_z1, D_G_z2))
+                      % (epoch, config.num_epochs, i, len(dataloader), loss_d_total.item(), loss_g.item(), D_x, d_g_z1, d_g_z2))
 
-            G_losses.append(errG.item())
-            D_losses.append(errD.item())
+            g_losses.append(loss_g.item())
+            d_losses.append(loss_d_total.item())
 
             # 檢查生成器的進度
             if (iters % 500 == 0) or ((epoch == config.num_epochs-1) and (i == len(dataloader)-1)):
@@ -272,7 +272,7 @@ def train(config, dataloader, generator, discriminator):
 
             iters += 1
 
-    return generator, discriminator, G_losses, D_losses, img_list
+    return generator, discriminator, g_losses, d_losses, img_list
 
 
 def main():
