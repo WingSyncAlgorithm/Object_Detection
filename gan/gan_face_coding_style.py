@@ -198,6 +198,24 @@ def show_images(images, epoch):
     plt.show()
 
 
+def update_network(model, optimizer, criterion, inputs, labels):
+    """
+    通用網絡更新器。
+    :param model: 要更新的神經網絡模型。
+    :param optimizer: 使用的優化器。
+    :param criterion: 損失函數。
+    :param inputs: 輸入數據。
+    :param labels: 目標標籤。
+    :param backward: 是否執行反向傳播。
+    :return: 計算的損失和模型輸出。
+    """
+    optimizer.zero_grad()
+    outputs = model(inputs)
+    loss = criterion(outputs, labels)
+    loss.backward()
+    return loss, outputs
+
+
 def train(config, dataloader, generator, discriminator):
     device = config.device
     fixed_noise = torch.randn(16, config.nz, 1, 1, device=device)
