@@ -13,7 +13,7 @@ import torchvision.utils as vutils
 
 class Config:
     # 將所有配置放在一個類別中，方便管理
-    dataroot = "dataset\\data"
+    dataroot = "dataset\\data_Crabs"
     batch_size = 1
     image_size = 128
     nz = 1000
@@ -52,7 +52,7 @@ class CustomDataset2(Dataset):
         self.data_dir = data_dir
         self.img_size = img_size
         self.num_classes = num_classes
-        self.categories = ["face"]
+        self.categories = ["Crabs"]
         self.data, self.labels = self.load_data()
 
     def load_data(self):
