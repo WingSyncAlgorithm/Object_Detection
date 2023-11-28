@@ -216,8 +216,8 @@ def train(config, dataloader, generator, discriminator):
 
     # 訓練過程中的追踪指標
     img_list = []
-    G_losses = []
-    D_losses = []
+    g_losses = []
+    d_losses = []
     iters = 0
 
     print("開始訓練...")
@@ -225,34 +225,34 @@ def train(config, dataloader, generator, discriminator):
         for i, data in enumerate(dataloader, 0):
             # (1) 更新判別器網絡: maximize log(D(x)) + log(1 - D(G(z)))
             discriminator.zero_grad()
-            # 訓練全部真實批次的資料
-            real_cpu = data[0].to(device)
-            b_size = real_cpu.size(0)
-            label = torch.full((b_size,), real_label,
+            # 訓練全部真實的批次資料
+            real_images = data[0].to(device)
+            batch_size = real_images.size(0)
+            label = torch.full((batch_size,), real_label,
                                dtype=torch.float, device=device)
-            output = discriminator(real_cpu).view(-1)
-            errD_real = criterion(output, label)
-            errD_real.backward()
+            output = discriminator(real_images).view(-1)
+            loss_d_real = criterion(output, label)
+            loss_d_real.backward()
             D_x = output.mean().item()
 
             # 訓練全部假的批次資料
-            noise = torch.randn(b_size, config.nz, 1, 1, device=device)
-            fake = generator(noise)
+            noise = torch.randn(batch_size, config.nz, 1, 1, device=device)
+            fake_images = generator(noise)
             label.fill_(fake_label)
-            output = discriminator(fake.detach()).view(-1)
-            errD_fake = criterion(output, label)
-            errD_fake.backward()
+            output = discriminator(fake_images.detach()).view(-1)
+            loss_d_fake = criterion(output, label)
+            loss_d_fake.backward()
             D_G_z1 = output.mean().item()
-            errD = errD_real + errD_fake
+            loss_d_total = loss_d_real + loss_d_fake
             optimizerD.step()
 
             # (2) 更新生成器網絡: maximize log(D(G(z)))
             generator.zero_grad()
             label.fill_(real_label)  # 生成器的假標籤是真的
-            output = discriminator(fake).view(-1)
-            errG = criterion(output, label)
-            errG.backward()
-            D_G_z2 = output.mean().item()
+            output = discriminator(fake_images).view(-1)
+            loss_g = criterion(output, label)
+            loss_g.backward()
+            d_g_z = output.mean().item()
             optimizerG.step()
 
             if i % 50 == 0:
