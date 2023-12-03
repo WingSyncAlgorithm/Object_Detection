@@ -25,8 +25,6 @@ class Config:
     device = torch.device("cuda:0" if (
         torch.cuda.is_available() and ngpu > 0) else "cpu")
 
-# 這裡保留您原本的 CustomDataset 和 CustomDataset2 類別
-
 
 class CustomDataset(Dataset):
     def __init__(self, root_dir, transform=None):
