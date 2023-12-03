@@ -13,7 +13,7 @@ import torchvision.utils as vutils
 
 class Config:
     # 將所有配置放在一個類別中，方便管理
-    dataroot = "dataset\\data"
+    dataroot = "dataset\\data_Crabs"
     batch_size = 100
     image_size = 128
     nz = 1000
